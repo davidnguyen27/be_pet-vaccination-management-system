@@ -1,23 +1,31 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { Public } from '@/shared/decorators/public.decorator';
-import { ResponseMessage } from '@/shared/decorators/response-message.decorator';
-import { RegisterUseCase } from '../application/use-cases/register.use-case';
-import { VerifyOtpUseCase } from '../application/use-cases/verify-otp.use-case';
-import { LoginUseCase } from '../application/use-cases/login.use-case';
-import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
-import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
-import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public, ResponseMessage, CurrentUser, JwtPayload } from '@/shared/decorators';
+import { getRequestInfo } from '@/shared/helpers/request-info.helper';
+
+import {
+  RegisterUseCase,
+  VerifyOtpUseCase,
+  LoginUseCase,
+  RefreshTokenUseCase,
+  ForgotPasswordUseCase,
+  ResetPasswordUseCase,
+  LogoutUseCase,
+  ResendTokenUseCase,
+} from '../application/use-cases';
+
 import {
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
+  ResendOtpDto,
   ResetPasswordDto,
   VerifyOtpDto,
-} from '../application/dtos/auth.dto';
+} from '../application/dtos/auth-req.dto';
 
-@Public()
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -27,8 +35,11 @@ export class AuthController {
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly resendTokenUseCase: ResendTokenUseCase,
   ) {}
 
+  @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ResponseMessage('Registration successful. Please check your email for the OTP.')
@@ -36,6 +47,15 @@ export class AuthController {
     return this.registerUseCase.execute(dto);
   }
 
+  @Public()
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('OTP resent successfully. Please check your email.')
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.resendTokenUseCase.execute(dto.email);
+  }
+
+  @Public()
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Email verified successfully.')
@@ -43,34 +63,44 @@ export class AuthController {
     return this.verifyOtpUseCase.execute(dto);
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Login successful.')
   login(@Body() dto: LoginDto, @Req() req: Request) {
-    return this.loginUseCase.execute(dto, {
-      userAgent: req.headers['user-agent'],
-      ipAddress: (req.headers['x-forwarded-for'] as string) ?? req.socket.remoteAddress,
-    });
+    const requestInfo = getRequestInfo(req);
+    return this.loginUseCase.execute(dto, requestInfo);
   }
 
-  @Post('refresh')
+  @Public()
+  @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Token refreshed successfully.')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.refreshTokenUseCase.execute(dto);
   }
 
+  @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Password reset OTP has been sent to your email.')
+  @ResponseMessage('The request is sent successfully.')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.forgotPasswordUseCase.execute(dto);
   }
 
+  @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Password reset successfully.')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.resetPasswordUseCase.execute(dto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Logout successful.')
+  logout(@CurrentUser() user: JwtPayload) {
+    return this.logoutUseCase.execute(user.sub);
   }
 }

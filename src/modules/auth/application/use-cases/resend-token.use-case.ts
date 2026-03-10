@@ -1,18 +1,15 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { OtpType } from '@/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { I_EMAIL_SERVICE } from '../ports/i-email.service';
-import type { IEmailService } from '../ports/i-email.service';
-import { ForgotPasswordDto } from '../dtos/auth-req.dto';
-import { AUTH_CONSTANTS } from '@/constants/auth';
+import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { AUTH_CONSTANTS } from '@/constants/auth';
 
 @Injectable()
-export class ForgotPasswordUseCase {
-  private readonly logger = new Logger(ForgotPasswordUseCase.name);
+export class ResendTokenUseCase {
+  private readonly logger = new Logger(ResendTokenUseCase.name);
 
   constructor(
     @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
@@ -20,14 +17,12 @@ export class ForgotPasswordUseCase {
     @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
   ) {}
 
-  async execute(dto: ForgotPasswordDto): Promise<void> {
-    const user = await this.userRepo.findByEmail(dto.email);
-    // Always return same message to prevent user enumeration
-    if (!user || !user.isActive || user.isDeleted) {
-      return;
-    }
+  async execute(email: string): Promise<void> {
+    const user = await this.userRepo.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isActive) throw new BadRequestException('Account is already verified');
 
-    await this.authRepo.invalidatePreviousOtps(user.id, OtpType.FORGOT_PASSWORD);
+    await this.authRepo.invalidatePreviousOtps(user.id, OtpType.REGISTER);
 
     const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
     const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
@@ -35,19 +30,19 @@ export class ForgotPasswordUseCase {
 
     await this.authRepo.createOtp({
       userId: user.id,
-      type: OtpType.FORGOT_PASSWORD,
+      type: OtpType.REGISTER,
       otpHash,
       expiresAt,
     });
 
     await this.emailService.sendOtp({
-      to: dto.email,
+      to: email,
       otp,
-      type: OtpType.FORGOT_PASSWORD,
+      type: OtpType.REGISTER,
       fullName: user.fullName ?? undefined,
     });
 
-    this.logger.log(`Forgot-password OTP sent to ${dto.email}`);
+    this.logger.log(`Resend OTP sent to ${email}`);
   }
 
   private generateOtp(length: number): string {

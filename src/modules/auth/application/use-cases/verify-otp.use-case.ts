@@ -1,16 +1,20 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { OtpType } from '../../../../../generated/prisma/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/repositories/i-auth.repository';
-import type { IAuthRepository } from '../../domain/repositories/i-auth.repository';
-import { VerifyOtpDto } from '../dtos/auth.dto';
+import { OtpType } from '@/enums';
+import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
+import type { IAuthRepository } from '../../domain/i-auth.repository';
+import { VerifyOtpDto } from '../dtos/auth-req.dto';
+import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
 
 @Injectable()
 export class VerifyOtpUseCase {
-  constructor(@Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository) {}
+  constructor(
+    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
+    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
+  ) {}
 
   async execute(dto: VerifyOtpDto): Promise<void> {
-    const user = await this.authRepo.findUserByEmail(dto.email);
+    const user = await this.userRepo.findByEmail(dto.email);
     if (!user) throw new NotFoundException('User not found');
 
     const otpRecord = await this.authRepo.findValidOtp(user.id, OtpType.REGISTER);
@@ -20,10 +24,6 @@ export class VerifyOtpUseCase {
 
     if (otpRecord.verifiedAt) {
       throw new BadRequestException('OTP already used');
-    }
-
-    if (new Date() > otpRecord.expiresAt) {
-      throw new BadRequestException('OTP has expired. Please request a new one.');
     }
 
     const isValid = await bcrypt.compare(dto.otp, otpRecord.otpHash);

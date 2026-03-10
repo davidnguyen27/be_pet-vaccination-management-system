@@ -1,7 +1,9 @@
+import { OtpType } from '@/enums';
+
 export interface SendOtpOptions {
   to: string;
   otp: string;
-  type: 'REGISTER' | 'FORGOT_PASSWORD';
+  type: OtpType;
   fullName?: string;
 }
 

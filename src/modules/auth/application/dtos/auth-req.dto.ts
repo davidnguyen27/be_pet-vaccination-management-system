@@ -1,16 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
-// Request DTOs
 export class RegisterDto {
   @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail({}, { message: 'Invalid email format!' })
+  @IsEmail({}, { message: 'Invalid email format' })
   @IsNotEmpty({ message: 'Email is required!' })
   email!: string;
 
   @ApiProperty({ example: 'password' })
   @IsString()
-  @MinLength(6, { message: 'Password must be at least 6 characters long!' })
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   @MaxLength(72)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, {
     message: 'Password must contain uppercase, lowercase, digit and special character',
@@ -26,20 +25,18 @@ export class RegisterDto {
 
 export class VerifyOtpDto {
   @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   email!: string;
 
   @ApiProperty({ example: '123456' })
   @IsString()
   @IsNotEmpty()
-  @MinLength(4)
-  @MaxLength(8)
   otp!: string;
 }
 
 export class LoginDto {
   @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   email!: string;
 
   @ApiProperty({ example: 'password' })
@@ -53,6 +50,13 @@ export class RefreshTokenDto {
   @IsString()
   @IsNotEmpty()
   refreshToken!: string;
+}
+
+export class ResendOtpDto {
+  @ApiProperty({ example: 'user@gmail.com' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  @IsNotEmpty({ message: 'Email is required!' })
+  email!: string;
 }
 
 export class ForgotPasswordDto {
@@ -79,33 +83,4 @@ export class ResetPasswordDto {
     message: 'Password must contain uppercase, lowercase, digit and special character',
   })
   newPassword!: string;
-}
-
-export class ResendOtpDto {
-  @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail({}, { message: 'Invalid email format' })
-  email!: string;
-}
-
-// Response DTOs
-export class AuthTokensResponseDto {
-  @ApiProperty()
-  accessToken: string;
-
-  @ApiProperty()
-  refreshToken: string;
-
-  constructor(accessToken: string, refreshToken: string) {
-    this.accessToken = accessToken;
-    this.refreshToken = refreshToken;
-  }
-}
-
-export class MessageResponseDto {
-  @ApiProperty()
-  message: string;
-
-  constructor(message: string) {
-    this.message = message;
-  }
 }

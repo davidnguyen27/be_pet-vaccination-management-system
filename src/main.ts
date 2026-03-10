@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@/shared/filters/http-exception.filter';
 import { setupSwagger } from '@/configs/swagger.config';
+import { API_PREFIX } from '@/constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,7 +13,7 @@ async function bootstrap() {
   const port = configService.get<number>('app.port') ?? 3000;
 
   // Global prefix
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(API_PREFIX);
 
   // CORS
   app.enableCors({

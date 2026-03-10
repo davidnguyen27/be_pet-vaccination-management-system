@@ -11,6 +11,7 @@ import { AuthModule } from '@/modules/auth/presentation/auth.module';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
 import { RolesGuard } from '@/shared/guards/roles.guard';
 import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
+import { UserModule } from '@/modules/user/presentation/user.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TransformInterceptor } from '@/shared/interceptors/transform.intercepto
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     PrismaModule,
     AuthModule,
+    UserModule,
   ],
   controllers: [],
   providers: [

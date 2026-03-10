@@ -1,55 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { OtpType, RoleCode } from '../../../../../generated/prisma/enums';
+import { OtpType } from '@/enums';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import {
-  CreateOtpData,
-  CreateUserData,
-  IAuthRepository,
-  SaveRefreshTokenData,
-} from '../../domain/repositories/i-auth.repository';
-import { UserEntity } from '../../domain/entities/user.entity';
-import { AuthMapper } from '../mappers/auth.mapper';
+import { CreateOtpData, IAuthRepository, SaveRefreshTokenData } from '../../domain/i-auth.repository';
 
 @Injectable()
 export class AuthRepository implements IAuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // User
-  async findUserByEmail(email: string): Promise<UserEntity | null> {
-    const raw = await this.prisma.user.findUnique({
-      where: { email },
-      include: { role: true },
-    });
-    return raw ? AuthMapper.toDomain(raw) : null;
-  }
-
-  async findUserById(userId: string): Promise<UserEntity | null> {
-    const raw = await this.prisma.user.findUnique({
-      where: { userId },
-      include: { role: true },
-    });
-    return raw ? AuthMapper.toDomain(raw) : null;
-  }
-
-  async createUser(data: CreateUserData): Promise<UserEntity> {
-    const role = await this.prisma.role.findUniqueOrThrow({
-      where: { code: data.roleCode as RoleCode },
-    });
-
-    const raw = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        password: data.passwordHash,
-        fullName: data.fullName,
-        phoneNumber: data.phoneNumber,
-        roleId: role.roleId,
-      },
-      include: { role: true },
-    });
-
-    return AuthMapper.toDomain(raw);
-  }
-
+  // user
   async activateUser(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { userId },
@@ -78,7 +36,6 @@ export class AuthRepository implements IAuthRepository {
         userId: data.userId,
         type: data.type,
         otpHash: data.otpHash,
-        otpSalt: data.otpSalt,
         expiresAt: data.expiresAt,
         lastSentAt: new Date(),
       },
@@ -141,6 +98,7 @@ export class AuthRepository implements IAuthRepository {
   async saveRefreshToken(data: SaveRefreshTokenData): Promise<{ tokenId: string }> {
     const record = await this.prisma.refreshToken.create({
       data: {
+        ...(data.tokenId ? { tokenId: data.tokenId } : {}),
         userId: data.userId,
         tokenHash: data.tokenHash,
         expiresAt: data.expiresAt,
@@ -152,14 +110,14 @@ export class AuthRepository implements IAuthRepository {
     return { tokenId: record.tokenId };
   }
 
-  async findRefreshToken(tokenHash: string): Promise<{
+  async findRefreshToken(tokenId: string): Promise<{
     tokenId: string;
     userId: string;
     expiresAt: Date;
     revokedAt: Date | null;
   } | null> {
     return await this.prisma.refreshToken.findUnique({
-      where: { tokenHash },
+      where: { tokenId },
       select: {
         tokenId: true,
         userId: true,
