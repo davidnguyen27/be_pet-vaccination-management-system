@@ -24,6 +24,14 @@ export class TransformInterceptor<T> implements NestInterceptor<T | ApiResponseD
         if (data !== null && typeof data === 'object' && 'statusCode' in data && 'success' in data) {
           return data as unknown as ApiResponseDto<T>;
         }
+
+        if (data !== null && typeof data === 'object' && 'data' in data && 'meta' in data) {
+          const { data: items, meta } = data as unknown as { data: T; meta: unknown };
+          return Object.assign(
+            new ApiResponseDto<T>(httpResponse.statusCode, customMessage ?? 'Request successful.', items),
+            { meta },
+          );
+        }
         return new ApiResponseDto<T>(httpResponse.statusCode, customMessage ?? 'Request successful.', data);
       }),
     );

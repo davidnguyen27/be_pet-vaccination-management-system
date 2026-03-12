@@ -34,7 +34,7 @@ export class RegisterUseCase {
 
     const user =
       existing ??
-      (await this.userRepo.createUser({
+      (await this.userRepo.create({
         email: dto.email,
         passwordHash,
         roleCode: RoleCode.OWN,

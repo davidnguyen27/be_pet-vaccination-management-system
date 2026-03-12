@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@/shared/filters/http-exception.filter';
 import { setupSwagger } from '@/configs/swagger.config';
@@ -11,6 +12,9 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port') ?? 3000;
+
+  // Cookies
+  app.use(cookieParser());
 
   // Global prefix
   app.setGlobalPrefix(API_PREFIX);

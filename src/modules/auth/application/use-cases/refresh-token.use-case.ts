@@ -1,13 +1,14 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomUUID } from 'crypto';
+import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
 import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { RefreshTokenDto } from '../dtos/auth-req.dto';
 import { AuthTokensResponseDto } from '../dtos/auth-res.dto';
 import type { JwtPayload } from '@/shared/decorators/current-user.decorator';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { AUTH_CONSTANTS } from '@/constants';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -18,10 +19,10 @@ export class RefreshTokenUseCase {
     private readonly configService: ConfigService,
   ) {}
 
-  async execute(dto: RefreshTokenDto): Promise<AuthTokensResponseDto> {
+  async execute(refreshToken: string): Promise<AuthTokensResponseDto> {
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(dto.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.get<string>('jwt.refreshSecret'),
       });
     } catch {
@@ -36,6 +37,10 @@ export class RefreshTokenUseCase {
     if (!storedToken || storedToken.revokedAt) {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
+
+    // Verify the token hash to prevent token substitution attacks
+    const isHashValid = await bcrypt.compare(refreshToken, storedToken.tokenHash);
+    if (!isHashValid) throw new UnauthorizedException('Invalid refresh token');
 
     const user = await this.userRepo.findById(payload.sub);
     if (!user || !user.isActive || user.isDeleted) {
@@ -62,8 +67,10 @@ export class RefreshTokenUseCase {
       },
     );
 
-    const newTokenHash = createHash('sha256').update(newRawRefreshToken).digest('hex');
+    const newTokenHash = await bcrypt.hash(newRawRefreshToken, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+    const decodedAccess = this.jwtService.decode<{ exp: number }>(newAccessToken);
     const decoded = this.jwtService.decode<{ exp: number }>(newRawRefreshToken);
+    const accessExpiresAt = new Date(decodedAccess.exp * 1000);
     const expiresAt = new Date(decoded.exp * 1000);
 
     // Token rotation: revoke old token, link to new one
@@ -75,6 +82,6 @@ export class RefreshTokenUseCase {
       expiresAt,
     });
 
-    return new AuthTokensResponseDto(newAccessToken, newRawRefreshToken);
+    return new AuthTokensResponseDto(newAccessToken, newRawRefreshToken, accessExpiresAt, expiresAt);
   }
 }

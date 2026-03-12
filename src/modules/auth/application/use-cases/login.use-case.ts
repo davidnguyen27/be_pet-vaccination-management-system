@@ -2,12 +2,13 @@ import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@n
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
 import { LoginDto } from '../dtos/auth-req.dto';
 import { JwtPayload } from '@/shared/decorators/current-user.decorator';
 import { AuthTokensResponseDto } from '../dtos/auth-res.dto';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { AUTH_CONSTANTS } from '@/constants';
 
 @Injectable()
 export class LoginUseCase {
@@ -49,10 +50,11 @@ export class LoginUseCase {
       },
     );
 
-    // SHA-256 is sufficient for a long random JWT — bcrypt is overkill here
-    const tokenHash = createHash('sha256').update(rawRefreshToken).digest('hex');
+    const tokenHash = await bcrypt.hash(rawRefreshToken, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
     // Derive expiry from the JWT itself so DB and token are always in sync
+    const decodedAccess = this.jwtService.decode<{ exp: number }>(accessToken);
     const decoded = this.jwtService.decode<{ exp: number }>(rawRefreshToken);
+    const accessExpiresAt = new Date(decodedAccess.exp * 1000);
     const expiresAt = new Date(decoded.exp * 1000);
 
     await this.authRepo.saveRefreshToken({
@@ -66,6 +68,6 @@ export class LoginUseCase {
 
     await this.authRepo.updateLastLogin(user.id);
 
-    return new AuthTokensResponseDto(accessToken, rawRefreshToken);
+    return new AuthTokensResponseDto(accessToken, rawRefreshToken, accessExpiresAt, expiresAt);
   }
 }

@@ -1,8 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public, ResponseMessage, CurrentUser, JwtPayload } from '@/shared/decorators';
 import { getRequestInfo } from '@/shared/helpers/request-info.helper';
+import { setTokenCookies } from '@/shared/helpers/token-cookies.helper';
 
 import {
   RegisterUseCase,
@@ -18,7 +19,6 @@ import {
 import {
   ForgotPasswordDto,
   LoginDto,
-  RefreshTokenDto,
   RegisterDto,
   ResendOtpDto,
   ResetPasswordDto,
@@ -67,17 +67,20 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Login successful.')
-  login(@Body() dto: LoginDto, @Req() req: Request) {
-    const requestInfo = getRequestInfo(req);
-    return this.loginUseCase.execute(dto, requestInfo);
+  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.loginUseCase.execute(dto, getRequestInfo(req));
+    setTokenCookies(res, tokens);
   }
 
   @Public()
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Token refreshed successfully.')
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.refreshTokenUseCase.execute(dto);
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies?.refresh_token as string | undefined;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token provided');
+    const tokens = await this.refreshTokenUseCase.execute(refreshToken);
+    setTokenCookies(res, tokens);
   }
 
   @Public()
@@ -100,7 +103,9 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Logout successful.')
-  logout(@CurrentUser() user: JwtPayload) {
-    return this.logoutUseCase.execute(user.sub);
+  async logout(@CurrentUser() user: JwtPayload, @Res({ passthrough: true }) res: Response) {
+    await this.logoutUseCase.execute(user.sub);
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
   }
 }

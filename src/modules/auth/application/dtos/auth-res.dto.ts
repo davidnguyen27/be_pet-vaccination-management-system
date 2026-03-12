@@ -1,14 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-
 export class AuthTokensResponseDto {
-  @ApiProperty()
   accessToken: string;
-
-  @ApiProperty()
   refreshToken: string;
+  accessExpiresAt: Date;
+  refreshExpiresAt: Date;
 
-  constructor(accessToken: string, refreshToken: string) {
+  constructor(accessToken: string, refreshToken: string, accessExpiresAt: Date, refreshExpiresAt: Date) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
+    this.accessExpiresAt = accessExpiresAt;
+    this.refreshExpiresAt = refreshExpiresAt;
   }
 }

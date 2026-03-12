@@ -113,6 +113,7 @@ export class AuthRepository implements IAuthRepository {
   async findRefreshToken(tokenId: string): Promise<{
     tokenId: string;
     userId: string;
+    tokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
   } | null> {
@@ -121,6 +122,7 @@ export class AuthRepository implements IAuthRepository {
       select: {
         tokenId: true,
         userId: true,
+        tokenHash: true,
         expiresAt: true,
         revokedAt: true,
       },

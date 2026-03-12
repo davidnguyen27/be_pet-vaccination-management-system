@@ -52,6 +52,7 @@ export interface IAuthRepository {
   findRefreshToken(tokenId: string): Promise<{
     tokenId: string;
     userId: string;
+    tokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
   } | null>;
