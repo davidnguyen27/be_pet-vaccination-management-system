@@ -1,3 +1,4 @@
+import { API_PREFIX } from '@/constants';
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -6,6 +7,7 @@ export function setupSwagger(app: INestApplication): void {
     .setTitle('Pet Vaccination Management System')
     .setDescription('API documentation for Pet Vaccination Management System')
     .setVersion('1.0')
+    .addServer(`/${API_PREFIX}`)
     .addBearerAuth(
       {
         type: 'http',
@@ -17,7 +19,7 @@ export function setupSwagger(app: INestApplication): void {
     )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, { ignoreGlobalPrefix: true });
 
   SwaggerModule.setup('api/v1/docs', app, document, {
     swaggerOptions: { persistAuthorization: true },

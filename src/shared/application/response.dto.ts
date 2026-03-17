@@ -1,13 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ApiResponseDto<T> {
-  @ApiProperty({ example: true })
+  @ApiProperty()
   success: boolean;
 
-  @ApiProperty({ example: 200 })
+  @ApiProperty()
   statusCode: number;
 
-  @ApiProperty({ example: 'OK' })
+  @ApiProperty()
   message: string;
 
   @ApiProperty()
@@ -20,7 +20,7 @@ export class ApiResponseDto<T> {
     this.data = data;
   }
 
-  static success<T>(data: T, message = 'Ok'): ApiResponseDto<T> {
+  static success<T>(data: T, message = 'OK'): ApiResponseDto<T> {
     return new ApiResponseDto<T>(200, message, data);
   }
 

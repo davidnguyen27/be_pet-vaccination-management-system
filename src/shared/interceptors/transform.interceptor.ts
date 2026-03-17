@@ -1,12 +1,13 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Response } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiResponseDto } from '../application/response.dto';
 import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator';
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponseDto<T>> {
+export class TransformInterceptor<T> implements NestInterceptor<T | ApiResponseDto<T>, ApiResponseDto<T>> {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ApiResponseDto<T>> {
@@ -15,11 +16,23 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponseDt
       context.getClass(),
     ]);
 
+    const httpResponse = context.switchToHttp().getResponse<Response>();
+
     return next.handle().pipe(
       map(data => {
         // If the handler already returns an ApiResponseDto, pass through
-        if (data instanceof ApiResponseDto) return data;
-        return ApiResponseDto.success(data, customMessage ?? 'Ok');
+        if (data !== null && typeof data === 'object' && 'statusCode' in data && 'success' in data) {
+          return data as unknown as ApiResponseDto<T>;
+        }
+
+        if (data !== null && typeof data === 'object' && 'data' in data && 'meta' in data) {
+          const { data: items, meta } = data as unknown as { data: T; meta: unknown };
+          return Object.assign(
+            new ApiResponseDto<T>(httpResponse.statusCode, customMessage ?? 'Request successful.', items),
+            { meta },
+          );
+        }
+        return new ApiResponseDto<T>(httpResponse.statusCode, customMessage ?? 'Request successful.', data);
       }),
     );
   }

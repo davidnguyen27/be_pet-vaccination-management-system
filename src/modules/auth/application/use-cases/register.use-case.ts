@@ -1,15 +1,14 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { OtpType } from '../../../../../generated/prisma/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/repositories/i-auth.repository';
-import type { IAuthRepository } from '../../domain/repositories/i-auth.repository';
+import { randomInt } from 'crypto';
+import { OtpType, RoleCode } from '@/enums';
+import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
+import type { IAuthRepository } from '../../domain/i-auth.repository';
 import { I_EMAIL_SERVICE } from '../ports/i-email.service';
 import type { IEmailService } from '../ports/i-email.service';
-import { RegisterDto } from '../dtos/auth.dto';
-
-const OTP_EXPIRY_MINUTES = 10;
-const OTP_LENGTH = 6;
-const BCRYPT_SALT_ROUNDS = 10;
+import { RegisterDto } from '../dtos/auth-req.dto';
+import { AUTH_CONSTANTS } from '@/constants/auth';
+import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
 
 @Injectable()
 export class RegisterUseCase {
@@ -17,23 +16,28 @@ export class RegisterUseCase {
 
   constructor(
     @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
+    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
   ) {}
 
   async execute(dto: RegisterDto): Promise<void> {
-    const existing = await this.authRepo.findUserByEmail(dto.email);
+    const existing = await this.userRepo.findByEmail(dto.email);
     if (existing && existing.isActive) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('Email has already been registered');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(dto.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+
+    if (existing) {
+      await this.authRepo.updatePassword(existing.id, passwordHash);
+    }
 
     const user =
       existing ??
-      (await this.authRepo.createUser({
+      (await this.userRepo.create({
         email: dto.email,
         passwordHash,
-        roleCode: 'OWN',
+        roleCode: RoleCode.OWN,
         fullName: dto.fullName,
       }));
 
@@ -41,9 +45,9 @@ export class RegisterUseCase {
     await this.authRepo.invalidatePreviousOtps(user.id, OtpType.REGISTER);
 
     // Generate OTP
-    const otp = this.generateOtp(OTP_LENGTH);
-    const otpHash = await bcrypt.hash(otp, BCRYPT_SALT_ROUNDS);
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+    const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
+    const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.OTP_EXPIRY_MINUTES * 60 * 1000);
 
     await this.authRepo.createOtp({
       userId: user.id,
@@ -55,7 +59,7 @@ export class RegisterUseCase {
     await this.emailService.sendOtp({
       to: dto.email,
       otp,
-      type: 'REGISTER',
+      type: OtpType.REGISTER,
       fullName: dto.fullName,
     });
 
@@ -63,6 +67,6 @@ export class RegisterUseCase {
   }
 
   private generateOtp(length: number): string {
-    return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    return Array.from({ length }, () => randomInt(0, 10)).join('');
   }
 }

@@ -6,6 +6,7 @@ export interface JwtPayload {
   sub: string; // userId
   email: string;
   roleCode: string;
+  jti?: string; // refresh token ID, present only in refresh JWTs
   iat?: number;
   exp?: number;
 }

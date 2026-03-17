@@ -11,6 +11,10 @@ import { AuthModule } from '@/modules/auth/presentation/auth.module';
 import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
 import { RolesGuard } from '@/shared/guards/roles.guard';
 import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
+import { UserModule } from '@/modules/user/presentation/user.module';
+import { PetModule } from '@/modules/pet/presentation/pet.module';
+import { OwnerModule } from '@/modules/owner/presentation/owner.module';
+import { StaffModule } from './modules/staff/presentation/staff.module';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { TransformInterceptor } from '@/shared/interceptors/transform.intercepto
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     PrismaModule,
     AuthModule,
+    UserModule,
+    OwnerModule,
+    StaffModule,
+    PetModule,
   ],
   controllers: [],
   providers: [
