@@ -1,5 +1,6 @@
 export abstract class BaseEntity {
   id: string;
+  isDeleted: boolean = false;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date | null;

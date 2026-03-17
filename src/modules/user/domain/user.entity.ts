@@ -25,7 +25,6 @@ export class UserEntity extends BaseEntity {
   avatarUrl?: string | null;
   dob?: Date | null;
   isActive!: boolean;
-  isDeleted!: boolean;
   roleCode!: string;
   lastLoginAt?: Date | null;
 
