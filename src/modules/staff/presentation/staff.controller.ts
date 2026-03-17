@@ -7,7 +7,7 @@ import { GetStaffIdUseCase } from '../application/use-cases/get-staff-id.use-cas
 import { StaffDto } from '../application/dtos/staff-req.dto';
 import { UpdateStaffUseCase } from '../application/use-cases/update-staff.use-case';
 
-@Controller('staffs')
+@Controller('staff')
 @ApiBearerAuth('access-token')
 export class StaffController {
   constructor(

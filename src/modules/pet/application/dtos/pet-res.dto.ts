@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { OwnerResponseDto } from '@/modules/owner/application/dtos/owner-res.dto';
 
 export class PetResponseDto {
   @ApiProperty()
@@ -6,6 +7,9 @@ export class PetResponseDto {
 
   @ApiProperty()
   ownerId!: string;
+
+  @ApiProperty({ type: () => OwnerResponseDto, nullable: true })
+  owner!: OwnerResponseDto | null;
 
   @ApiProperty()
   name!: string;
