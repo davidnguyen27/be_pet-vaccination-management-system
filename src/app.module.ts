@@ -15,6 +15,7 @@ import { UserModule } from '@/modules/user/presentation/user.module';
 import { PetModule } from '@/modules/pet/presentation/pet.module';
 import { OwnerModule } from '@/modules/owner/presentation/owner.module';
 import { StaffModule } from './modules/staff/presentation/staff.module';
+import { VetModule } from './modules/vet/presentation/vet.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { StaffModule } from './modules/staff/presentation/staff.module';
     UserModule,
     OwnerModule,
     StaffModule,
+    VetModule,
     PetModule,
   ],
   controllers: [],
