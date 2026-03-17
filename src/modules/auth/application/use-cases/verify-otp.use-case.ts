@@ -1,9 +1,8 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { OtpType } from '@/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
 import { VerifyOtpDto } from '../dtos/auth-req.dto';
+import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
 
 @Injectable()

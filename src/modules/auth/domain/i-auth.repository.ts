@@ -28,7 +28,7 @@ export interface SaveRefreshTokenData {
 export interface IAuthRepository {
   /** User */
   activateUser(userId: string): Promise<void>;
-  updatePassword(userId: string, passwordHash: string): Promise<void>;
+  changePassword(userId: string, passwordHash: string): Promise<void>;
   updateLastLogin(userId: string): Promise<void>;
 
   /** OTP */

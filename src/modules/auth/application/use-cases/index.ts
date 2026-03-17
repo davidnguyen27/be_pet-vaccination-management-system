@@ -6,3 +6,4 @@ export * from './forgot-password.use-case';
 export * from './reset-password.use-case';
 export * from './logout.use-case';
 export * from './resend-token.use-case';
+export * from './get-me.use-case';

@@ -35,7 +35,7 @@ export class ResetPasswordUseCase {
     const newPasswordHash = await bcrypt.hash(dto.newPassword, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
 
     await this.authRepo.markOtpVerified(otpRecord.otpCodeId);
-    await this.authRepo.updatePassword(user.id, newPasswordHash);
+    await this.authRepo.changePassword(user.id, newPasswordHash);
     await this.authRepo.revokeAllUserRefreshTokens(user.id);
   }
 }

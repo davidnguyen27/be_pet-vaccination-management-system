@@ -12,6 +12,9 @@ import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
 import { RolesGuard } from '@/shared/guards/roles.guard';
 import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
 import { UserModule } from '@/modules/user/presentation/user.module';
+import { PetModule } from '@/modules/pet/presentation/pet.module';
+import { OwnerModule } from '@/modules/owner/presentation/owner.module';
+import { StaffModule } from './modules/staff/presentation/staff.module';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { UserModule } from '@/modules/user/presentation/user.module';
     PrismaModule,
     AuthModule,
     UserModule,
+    OwnerModule,
+    StaffModule,
+    PetModule,
   ],
   controllers: [],
   providers: [

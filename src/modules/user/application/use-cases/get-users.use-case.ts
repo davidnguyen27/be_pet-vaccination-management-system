@@ -13,7 +13,7 @@ export class GetAllUsersUseCase {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
 
-    const result = await this.userRepo.findAllWithFilters({
+    const result = await this.userRepo.findAll({
       page,
       limit,
       search: query.search,

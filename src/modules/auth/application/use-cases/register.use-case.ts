@@ -1,6 +1,5 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
 import { OtpType, RoleCode } from '@/enums';
 import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
 import type { IAuthRepository } from '../../domain/i-auth.repository';
@@ -9,6 +8,7 @@ import type { IEmailService } from '../ports/i-email.service';
 import { RegisterDto } from '../dtos/auth-req.dto';
 import { AUTH_CONSTANTS } from '@/constants/auth';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { generateOtp } from '@/shared/helpers/generate-otp.helper';
 
 @Injectable()
 export class RegisterUseCase {
@@ -26,10 +26,19 @@ export class RegisterUseCase {
       throw new ConflictException('Email has already been registered');
     }
 
+    if (existing?.isDeleted) {
+      throw new ConflictException('This account has been deleted and cannot be re-registered');
+    }
+
+    if (existing && existing.roleCode !== (RoleCode.OWN as string)) {
+      throw new ConflictException('Email already belongs to a non-owner account');
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
 
     if (existing) {
-      await this.authRepo.updatePassword(existing.id, passwordHash);
+      await this.authRepo.changePassword(existing.id, passwordHash);
+      await this.userRepo.ensureOwnerProfile(existing.id);
     }
 
     const user =
@@ -38,6 +47,7 @@ export class RegisterUseCase {
         email: dto.email,
         passwordHash,
         roleCode: RoleCode.OWN,
+        isActive: false,
         fullName: dto.fullName,
       }));
 
@@ -45,7 +55,7 @@ export class RegisterUseCase {
     await this.authRepo.invalidatePreviousOtps(user.id, OtpType.REGISTER);
 
     // Generate OTP
-    const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
+    const otp = generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
     const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
     const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.OTP_EXPIRY_MINUTES * 60 * 1000);
 
@@ -64,9 +74,5 @@ export class RegisterUseCase {
     });
 
     this.logger.log(`Registration OTP sent to ${dto.email}`);
-  }
-
-  private generateOtp(length: number): string {
-    return Array.from({ length }, () => randomInt(0, 10)).join('');
   }
 }

@@ -12,6 +12,7 @@ import {
   ResetPasswordUseCase,
   LogoutUseCase,
   ResendTokenUseCase,
+  GetMeUseCase,
 } from '../application/use-cases';
 
 import { AuthRepository } from '../infrastructure/repositories/auth.repository';
@@ -29,6 +30,7 @@ const USE_CASES = [
   ResetPasswordUseCase,
   LogoutUseCase,
   ResendTokenUseCase,
+  GetMeUseCase,
 ];
 
 @Module({

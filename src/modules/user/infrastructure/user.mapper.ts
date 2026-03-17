@@ -1,7 +1,7 @@
 import { UserResponseDto } from '../application/dtos/user-res.dto';
 import { UserEntity } from '../domain/user.entity';
 
-export interface UserWithRole {
+interface UserRaw {
   userId: string;
   email: string;
   password: string;
@@ -11,7 +11,6 @@ export interface UserWithRole {
   dob?: Date | null;
   isActive: boolean;
   isDeleted: boolean;
-  roleId: string;
   role: {
     code: string;
   };
@@ -22,7 +21,7 @@ export interface UserWithRole {
 }
 
 export class UserMapper {
-  static toDomain(raw: UserWithRole): UserEntity {
+  static toDomain(raw: UserRaw): UserEntity {
     return new UserEntity({
       id: raw.userId,
       email: raw.email,
@@ -33,7 +32,7 @@ export class UserMapper {
       dob: raw.dob,
       isActive: raw.isActive,
       isDeleted: raw.isDeleted,
-      roleId: raw.roleId,
+      // roleId: raw.roleId,
       roleCode: raw.role.code,
       lastLoginAt: raw.lastLoginAt,
       createdAt: raw.createdAt,

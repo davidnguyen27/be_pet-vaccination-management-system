@@ -1,29 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { RoleCode } from '@/enums';
+import { BaseQueryDto } from '@/shared/application/base-query.dto';
 
-export class UserQueryDto {
-  @ApiPropertyOptional({ example: 1, minimum: 1 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Transform(({ value }) => Number(value))
-  page?: number;
-
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @Transform(({ value }) => Number(value))
-  limit?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  search?: string;
-
+export class UserQueryDto extends BaseQueryDto {
   @ApiPropertyOptional({ enum: RoleCode })
   @IsOptional()
   @IsEnum(RoleCode)

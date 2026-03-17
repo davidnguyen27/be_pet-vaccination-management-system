@@ -10,7 +10,6 @@ export interface UserProps {
   dob?: Date | null;
   isActive: boolean;
   isDeleted: boolean;
-  roleId: string;
   roleCode: string;
   lastLoginAt?: Date | null;
   createdAt: Date;
@@ -27,7 +26,6 @@ export class UserEntity extends BaseEntity {
   dob?: Date | null;
   isActive!: boolean;
   isDeleted!: boolean;
-  roleId!: string;
   roleCode!: string;
   lastLoginAt?: Date | null;
 

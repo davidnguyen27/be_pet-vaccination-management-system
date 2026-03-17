@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { IEmailService, SendOtpOptions } from '../../application/ports/i-email.service';
+import { OtpType } from '@/enums';
 
 @Injectable()
 export class NodemailerService implements IEmailService {
@@ -23,12 +24,12 @@ export class NodemailerService implements IEmailService {
   }
 
   async sendOtp(options: SendOtpOptions): Promise<void> {
-    const subject = options.type === 'REGISTER' ? 'Verify your PVMS account' : 'Reset your PVMS password';
+    const subject = options.type === OtpType.REGISTER ? 'Verify your PVMS account' : 'Reset your PVMS password';
 
     const greeting = options.fullName ? `Hi ${options.fullName},` : 'Hi,';
 
     const body =
-      options.type === 'REGISTER'
+      options.type === OtpType.REGISTER
         ? `${greeting}\n\nYour verification OTP is: <strong>${options.otp}</strong>\n\nThis code expires in 10 minutes.`
         : `${greeting}\n\nYour password reset OTP is: <strong>${options.otp}</strong>\n\nThis code expires in 10 minutes. If you did not request this, ignore this email.`;
 

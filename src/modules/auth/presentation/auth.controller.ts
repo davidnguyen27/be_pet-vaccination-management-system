@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public, ResponseMessage, CurrentUser, JwtPayload } from '@/shared/decorators';
 import { getRequestInfo } from '@/shared/helpers/request-info.helper';
 import { setTokenCookies } from '@/shared/helpers/token-cookies.helper';
@@ -14,6 +14,7 @@ import {
   ResetPasswordUseCase,
   LogoutUseCase,
   ResendTokenUseCase,
+  GetMeUseCase,
 } from '../application/use-cases';
 
 import {
@@ -37,7 +38,17 @@ export class AuthController {
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly resendTokenUseCase: ResendTokenUseCase,
+    private readonly getMeUseCase: GetMeUseCase,
   ) {}
+
+  @ApiBearerAuth('access-token')
+  @Post('me')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Get current user successfully.')
+  @ApiOperation({ summary: 'Get current logged-in user' })
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.getMeUseCase.execute(user.sub);
+  }
 
   @Public()
   @Post('register')

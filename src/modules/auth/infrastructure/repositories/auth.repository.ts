@@ -15,7 +15,7 @@ export class AuthRepository implements IAuthRepository {
     });
   }
 
-  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+  async changePassword(userId: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({
       where: { userId },
       data: { password: passwordHash },
