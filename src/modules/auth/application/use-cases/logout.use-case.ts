@@ -5,7 +5,11 @@ import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.rep
 export class LogoutUseCase {
   constructor(@Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository) {}
 
-  async execute(userId: string): Promise<void> {
-    await this.authRepo.revokeAllUserRefreshTokens(userId);
+  async execute(userId: string, tokenId?: string): Promise<void> {
+    if (tokenId) {
+      await this.authRepo.revokeRefreshToken(tokenId, userId);
+    } else {
+      await this.authRepo.revokeAllUserRefreshTokens(userId);
+    }
   }
 }

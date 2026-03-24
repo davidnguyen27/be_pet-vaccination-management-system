@@ -1,21 +1,9 @@
 import { RoleCode } from '@/enums';
 import { UserEntity } from './user.entity';
-import { employment_status, employment_type } from '@/enums';
+import type { PaginatedResult } from '@/shared/domain/paginated-result.type';
+import { Params } from '@/shared/domain/query-params.type';
 
 export const I_USER_REPOSITORY = Symbol('IUserRepository');
-
-export interface CreateStaffProfileData {
-  code: string;
-  jobTitle?: string;
-  department?: string;
-  employmentType?: employment_type;
-  employmentStatus?: employment_status;
-  joinDate: Date;
-  endDate?: Date | null;
-  address: string;
-  citizenId: string;
-  notes?: string;
-}
 
 export interface CreateUserData {
   id?: string;
@@ -27,7 +15,6 @@ export interface CreateUserData {
   phoneNumber?: string;
   avatarUrl?: string;
   dob?: Date | null;
-  staffProfile?: CreateStaffProfileData;
 }
 
 export interface UpdateUserData {
@@ -41,19 +28,9 @@ export interface UpdateUserData {
   dob?: Date | null;
 }
 
-export interface GetUsersFilter {
-  page: number;
-  limit: number;
-  search?: string;
+export interface GetUsersFilter extends Params {
   roleCode?: RoleCode;
   isActive?: boolean;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
 }
 
 export interface IUserRepository {

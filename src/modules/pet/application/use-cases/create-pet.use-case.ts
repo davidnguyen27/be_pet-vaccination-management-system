@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PetRequestDto } from '../dtos/pet-req.dto';
+import { PetDto } from '../dtos/pet-req.dto';
 import { PetResponseDto } from '../dtos/pet-res.dto';
 import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
 import { PetMapper } from '../../infrastructure/pet.mapper';
@@ -8,7 +8,7 @@ import { PetMapper } from '../../infrastructure/pet.mapper';
 export class CreatePetUseCase {
   constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
 
-  async execute(dto: PetRequestDto): Promise<PetResponseDto> {
+  async execute(dto: PetDto): Promise<PetResponseDto> {
     const pet = await this.petRepo.create({
       ownerId: dto.ownerId,
       speciesId: dto.speciesId,

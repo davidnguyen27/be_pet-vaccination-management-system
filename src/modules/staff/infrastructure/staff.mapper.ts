@@ -3,11 +3,11 @@ import { StaffEntity } from '../domain/staff.entity';
 import { StaffResponseDto } from '../application/dtos/staff-res.dto';
 import { UserResponseDto } from '@/modules/user/application/dtos/user-res.dto';
 
-interface StaffRaw {
-  profileId: string;
+export interface StaffRaw {
+  id: string;
   userId: string;
   user: {
-    userId: string;
+    id: string;
     email: string;
     fullName?: string | null;
     phoneNumber?: string | null;
@@ -22,8 +22,8 @@ interface StaffRaw {
   code: string;
   jobTitle: string | null;
   department: string | null;
-  employmentType: employment_type;
-  employmentStatus: employment_status;
+  employmentType: employment_type | 'FULL_TIME' | 'PART_TIME';
+  employmentStatus: employment_status | 'WORKING' | 'ON_LEAVE';
   joinDate: Date;
   endDate: Date | null;
   address: string;
@@ -36,9 +36,9 @@ interface StaffRaw {
 export class StaffMapper {
   static toDomain(raw: StaffRaw): StaffEntity {
     return new StaffEntity({
-      id: raw.profileId,
+      id: raw.id,
       user: {
-        id: raw.user.userId,
+        id: raw.user.id,
         email: raw.user.email,
         fullName: raw.user.fullName,
         phoneNumber: raw.user.phoneNumber,
@@ -51,8 +51,8 @@ export class StaffMapper {
       code: raw.code,
       jobTitle: raw.jobTitle,
       department: raw.department,
-      employmentType: raw.employmentType,
-      employmentStatus: raw.employmentStatus,
+      employmentType: raw.employmentType as employment_type,
+      employmentStatus: raw.employmentStatus as employment_status,
       joinDate: raw.joinDate,
       endDate: raw.endDate,
       address: raw.address,
@@ -65,7 +65,7 @@ export class StaffMapper {
 
   static toResponse(staff: StaffEntity): StaffResponseDto {
     return new StaffResponseDto({
-      profileId: staff.id,
+      id: staff.id,
       user: new UserResponseDto({
         id: staff.user.id,
         email: staff.user.email,

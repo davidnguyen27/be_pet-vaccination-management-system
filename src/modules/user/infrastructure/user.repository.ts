@@ -1,33 +1,47 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import {
-  CreateUserData,
-  UpdateUserData,
-  GetUsersFilter,
-  IUserRepository,
-  PaginatedResult,
-} from '../domain/i-user.repository';
+import { CreateUserData, UpdateUserData, GetUsersFilter, IUserRepository } from '../domain/i-user.repository';
 import { UserEntity } from '../domain/user.entity';
 import { UserMapper } from './user.mapper';
 import { Prisma } from '../../../../generated/prisma/client';
 import { RoleCode } from '@/enums';
+import { PaginatedResult } from '@/shared/domain/paginated-result.type';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly userInclude = {
+    role: true,
+    ownerProfile: true,
+    vetProfile: true,
+    staffProfile: true,
+  };
+
+  private buildDefaultStaffCode(userId: string): string {
+    return `STAFF-${userId.slice(0, 8).toUpperCase()}`;
+  }
+
+  private buildDefaultVetLicenseNo(userId: string): string {
+    return `LIC-${userId.slice(0, 8).toUpperCase()}`;
+  }
+
+  private buildDefaultCitizenId(prefix: 'STAFF' | 'VET', userId: string): string {
+    return `${prefix}-${userId.slice(0, 12).toUpperCase()}`;
+  }
+
   async findByEmail(email: string): Promise<UserEntity | null> {
     const raw = await this.prisma.user.findUnique({
       where: { email },
-      include: { role: true },
+      include: this.userInclude,
     });
     return raw ? UserMapper.toDomain(raw) : null;
   }
 
-  async findById(id: string): Promise<UserEntity | null> {
+  async findById(userId: string): Promise<UserEntity | null> {
     const raw = await this.prisma.user.findUnique({
-      where: { userId: id },
-      include: { role: true },
+      where: { id: userId },
+      include: this.userInclude,
     });
     return raw ? UserMapper.toDomain(raw) : null;
   }
@@ -41,7 +55,7 @@ export class UserRepository implements IUserRepository {
     const [raws, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,
-        include: { role: true },
+        include: this.userInclude,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -79,16 +93,16 @@ export class UserRepository implements IUserRepository {
           phoneNumber: data.phoneNumber,
           avatarUrl: data.avatarUrl,
           dob: data.dob,
-          roleId: role.roleId,
+          roleId: role.id,
           isActive: data.isActive ?? true,
         },
       });
 
-      await this.createRoleProfile(tx, user.userId, data);
+      await this.createRoleProfile(tx, user.id, data.roleCode);
 
       return tx.user.findUniqueOrThrow({
-        where: { userId: user.userId },
-        include: { role: true },
+        where: { id: user.id },
+        include: this.userInclude,
       });
     });
 
@@ -99,7 +113,7 @@ export class UserRepository implements IUserRepository {
     const role = data.roleCode ? await this.prisma.role.findUniqueOrThrow({ where: { code: data.roleCode } }) : null;
 
     const raw = await this.prisma.user.update({
-      where: { userId: data.id },
+      where: { id: data.id },
       data: {
         email: data.email,
         ...(data.passwordHash && { password: data.passwordHash }),
@@ -107,18 +121,19 @@ export class UserRepository implements IUserRepository {
         phoneNumber: data.phoneNumber,
         avatarUrl: data.avatarUrl,
         dob: data.dob,
-        ...(role && { roleId: role.roleId }),
+        ...(role && { roleId: role.id }),
+        updatedAt: new Date(),
       },
-      include: { role: true },
+      include: this.userInclude,
     });
 
     return UserMapper.toDomain(raw);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(userId: string): Promise<void> {
     await this.prisma.user.update({
-      where: { userId: id },
-      data: { isDeleted: true },
+      where: { id: userId },
+      data: { isDeleted: true, deletedAt: new Date(), isActive: false },
     });
   }
 
@@ -137,30 +152,37 @@ export class UserRepository implements IUserRepository {
     };
   }
 
-  private async createRoleProfile(tx: Prisma.TransactionClient, userId: string, data: CreateUserData): Promise<void> {
-    switch (data.roleCode) {
+  private async createRoleProfile(tx: Prisma.TransactionClient, userId: string, roleCode: RoleCode): Promise<void> {
+    switch (roleCode) {
       case RoleCode.OWN:
         await tx.ownerProfile.create({ data: { userId } });
         return;
 
       case RoleCode.STAFF:
-        if (!data.staffProfile) {
-          throw new BadRequestException('staffProfile is required when roleCode is STAFF');
-        }
-
         await tx.staffProfile.create({
           data: {
             userId,
-            code: data.staffProfile.code,
-            jobTitle: data.staffProfile.jobTitle,
-            department: data.staffProfile.department,
-            employmentType: data.staffProfile.employmentType,
-            employmentStatus: data.staffProfile.employmentStatus,
-            joinDate: data.staffProfile.joinDate,
-            endDate: data.staffProfile.endDate,
-            address: data.staffProfile.address,
-            citizenId: data.staffProfile.citizenId,
-            notes: data.staffProfile.notes,
+            code: this.buildDefaultStaffCode(userId),
+            joinDate: new Date(),
+            address: '',
+            citizenId: this.buildDefaultCitizenId('STAFF', userId),
+          },
+        });
+        return;
+
+      case RoleCode.VET:
+        await tx.vetProfile.create({
+          data: {
+            userId,
+            bio: '',
+            licenseNo: this.buildDefaultVetLicenseNo(userId),
+            licenseIssueBy: 'N/A',
+            licenseValidFrom: new Date(),
+            licenseValidTo: new Date(),
+            joinDate: new Date(),
+            address: '',
+            citizenId: this.buildDefaultCitizenId('VET', userId),
+            employmentStatus: 'WORKING',
           },
         });
         return;

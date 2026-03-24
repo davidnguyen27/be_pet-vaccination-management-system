@@ -23,17 +23,6 @@ export class RegisterDto {
   fullName?: string;
 }
 
-export class VerifyOtpDto {
-  @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail({}, { message: 'Invalid email format' })
-  email!: string;
-
-  @ApiProperty({ example: '123456' })
-  @IsString()
-  @IsNotEmpty()
-  otp!: string;
-}
-
 export class LoginDto {
   @ApiProperty({ example: 'user@gmail.com' })
   @IsEmail({}, { message: 'Invalid email format' })
@@ -52,7 +41,14 @@ export class RefreshTokenDto {
   refreshToken!: string;
 }
 
-export class ResendOtpDto {
+export class VerifyEmailDto {
+  @ApiProperty({ example: 'verification_token' })
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+}
+
+export class ResendEmailDto {
   @ApiProperty({ example: 'user@gmail.com' })
   @IsEmail({}, { message: 'Invalid email format' })
   @IsNotEmpty({ message: 'Email is required!' })
@@ -62,18 +58,15 @@ export class ResendOtpDto {
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'user@gmail.com' })
   @IsEmail({}, { message: 'Invalid email format' })
+  @IsNotEmpty({ message: 'Email is required!' })
   email!: string;
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ example: 'user@gmail.com' })
-  @IsEmail({}, { message: 'Invalid email format' })
-  email!: string;
-
-  @ApiProperty({ example: '123456' })
+  @ApiProperty({ example: 'reset_password_token' })
   @IsString()
   @IsNotEmpty()
-  otp!: string;
+  token!: string;
 
   @ApiProperty({ example: 'new password' })
   @IsString()
@@ -83,4 +76,11 @@ export class ResetPasswordDto {
     message: 'Password must contain uppercase, lowercase, digit and special character',
   })
   newPassword!: string;
+}
+
+export class ValidateTokenDto {
+  @ApiProperty({ example: 'reset_password_token' })
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
 }

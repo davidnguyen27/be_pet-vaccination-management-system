@@ -1,14 +1,18 @@
-import { OtpType } from '@/enums';
-
-export interface SendOtpOptions {
+export interface SendVerificationLink {
   to: string;
-  otp: string;
-  type: OtpType;
+  verifyUrl: string;
+  fullName?: string;
+}
+
+export interface SendResetPasswordLink {
+  to: string;
+  resetUrl: string;
   fullName?: string;
 }
 
 export interface IEmailService {
-  sendOtp(options: SendOtpOptions): Promise<void>;
+  sendVerificationLink(options: SendVerificationLink): Promise<void>;
+  sendResetPasswordLink(options: SendResetPasswordLink): Promise<void>;
 }
 
 export const I_EMAIL_SERVICE = Symbol('IEmailService');

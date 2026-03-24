@@ -1,10 +1,9 @@
-import { employment_status, employment_type } from '@/enums';
 import { UserResponseDto } from '@/modules/user/application/dtos/user-res.dto';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class StaffResponseDto {
   @ApiProperty()
-  profileId!: string;
+  id!: string;
 
   @ApiProperty({ type: () => UserResponseDto })
   user!: UserResponseDto;
@@ -18,11 +17,11 @@ export class StaffResponseDto {
   @ApiProperty({ nullable: true })
   department!: string | null;
 
-  @ApiProperty({ enum: employment_type })
-  employmentType!: employment_type;
+  @ApiProperty()
+  employmentType!: string;
 
-  @ApiProperty({ enum: employment_status })
-  employmentStatus!: employment_status;
+  @ApiProperty()
+  employmentStatus!: string;
 
   @ApiProperty()
   joinDate!: Date;

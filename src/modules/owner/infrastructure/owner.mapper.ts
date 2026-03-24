@@ -2,11 +2,11 @@ import { UserResponseDto } from '@/modules/user/application/dtos/user-res.dto';
 import { OwnerResponseDto } from '../application/dtos/owner-res.dto';
 import { OwnerEntity } from '../domain/owner.entity';
 
-interface OwnerRaw {
-  profileId: string;
+export interface OwnerRaw {
+  id: string;
   userId: string;
   user?: {
-    userId: string;
+    id: string;
     email: string;
     fullName?: string | null;
     phoneNumber?: string | null;
@@ -29,10 +29,10 @@ interface OwnerRaw {
 export class OwnerMapper {
   static toDomain(raw: OwnerRaw): OwnerEntity {
     return new OwnerEntity({
-      id: raw.profileId,
+      id: raw.id,
       user: raw.user
         ? ({
-            id: raw.user.userId,
+            id: raw.user.id,
             email: raw.user.email,
             fullName: raw.user.fullName,
             phoneNumber: raw.user.phoneNumber,

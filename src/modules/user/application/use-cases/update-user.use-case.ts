@@ -3,7 +3,6 @@ import * as bcrypt from 'bcrypt';
 import { UserDto } from '../dtos/user-req.dto';
 import { I_USER_REPOSITORY, type IUserRepository } from '../../domain/i-user.repository';
 import { UserMapper } from '../../infrastructure/user.mapper';
-import { RoleCode } from '@/enums';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -25,7 +24,7 @@ export class UpdateUserUseCase {
       phoneNumber: dto.phoneNumber,
       avatarUrl: dto.avatarUrl,
       dob: dto.dob,
-      roleCode: dto.roleCode as RoleCode,
+      roleCode: dto.roleCode,
     });
 
     return UserMapper.toResponse(updated);

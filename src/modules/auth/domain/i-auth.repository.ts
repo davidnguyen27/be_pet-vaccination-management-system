@@ -1,5 +1,3 @@
-import { OtpType } from '@/enums';
-
 export interface CreateUserData {
   email: string;
   passwordHash: string;
@@ -8,11 +6,11 @@ export interface CreateUserData {
   phoneNumber?: string;
 }
 
-export interface CreateOtpData {
+export interface CreateVerifyTokenData {
   userId: string;
-  type: OtpType;
-  otpHash: string;
+  tokenHash: string;
   expiresAt: Date;
+  redirectUrl?: string;
 }
 
 export interface SaveRefreshTokenData {
@@ -28,24 +26,20 @@ export interface SaveRefreshTokenData {
 export interface IAuthRepository {
   /** User */
   activateUser(userId: string): Promise<void>;
-  updatePassword(userId: string, passwordHash: string): Promise<void>;
+  changePassword(userId: string, passwordHash: string): Promise<void>;
   updateLastLogin(userId: string): Promise<void>;
 
-  /** OTP */
-  createOtp(data: CreateOtpData): Promise<{ otpCodeId: string }>;
-  findValidOtp(
-    userId: string,
-    type: OtpType,
-  ): Promise<{
-    otpCodeId: string;
-    otpHash: string;
-    resendCount: number;
+  /** Verification email */
+  createVerifyToken(data: CreateVerifyTokenData): Promise<void>;
+  findValidVerifyTokenByHash(tokenHash: string): Promise<{
+    id: string;
+    userId: string;
+    redirectUrl?: string | null;
     expiresAt: Date;
-    verifiedAt: Date | null;
+    usedAt: Date | null;
   } | null>;
-  markOtpVerified(otpCodeId: string): Promise<void>;
-  incrementOtpResend(otpCodeId: string): Promise<void>;
-  invalidatePreviousOtps(userId: string, type: OtpType): Promise<void>;
+  markVerifyTokenUsed(id: string): Promise<void>;
+  invalidatePreviousVerifyTokens(userId: string): Promise<void>;
 
   /** Refresh token */
   saveRefreshToken(data: SaveRefreshTokenData): Promise<{ tokenId: string }>;
@@ -56,7 +50,7 @@ export interface IAuthRepository {
     expiresAt: Date;
     revokedAt: Date | null;
   } | null>;
-  revokeRefreshToken(tokenId: string, replacedByTokenId?: string): Promise<void>;
+  revokeRefreshToken(tokenId: string, userId: string, replacedByTokenId?: string): Promise<number>;
   revokeAllUserRefreshTokens(userId: string): Promise<void>;
 }
 

@@ -29,10 +29,13 @@ export class LoginUseCase {
     const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isMatch) throw new UnauthorizedException('Invalid email or password');
 
+    const tokenId = randomUUID();
+
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       roleCode: user.roleCode,
+      jti: tokenId,
     };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -40,15 +43,10 @@ export class LoginUseCase {
       expiresIn: (this.configService.get<string>('jwt.accessExpiresIn') ?? '1h') as unknown as number,
     });
 
-    // Pre-generate tokenId so it can be embedded as `jti` in the JWT for later DB lookup
-    const tokenId = randomUUID();
-    const rawRefreshToken = this.jwtService.sign(
-      { ...payload, jti: tokenId },
-      {
-        secret: this.configService.get<string>('jwt.refreshSecret'),
-        expiresIn: (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as unknown as number,
-      },
-    );
+    const rawRefreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('jwt.refreshSecret'),
+      expiresIn: (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as unknown as number,
+    });
 
     const tokenHash = await bcrypt.hash(rawRefreshToken, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
     // Derive expiry from the JWT itself so DB and token are always in sync

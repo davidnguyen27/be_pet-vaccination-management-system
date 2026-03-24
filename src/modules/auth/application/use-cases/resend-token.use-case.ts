@@ -1,20 +1,21 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
-import { OtpType } from '@/enums';
+import { createHash, randomBytes } from 'crypto';
 import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
 import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
 import { AUTH_CONSTANTS } from '@/constants/auth';
+import { API_PREFIX } from '@/constants';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class ResendTokenUseCase {
-  private readonly logger = new Logger(ResendTokenUseCase.name);
+export class ResendEmailUseCase {
+  private readonly logger = new Logger(ResendEmailUseCase.name);
 
   constructor(
     @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
     @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(email: string): Promise<void> {
@@ -22,30 +23,31 @@ export class ResendTokenUseCase {
     if (!user) throw new NotFoundException('User not found');
     if (user.isActive) throw new BadRequestException('Account is already verified');
 
-    await this.authRepo.invalidatePreviousOtps(user.id, OtpType.REGISTER);
+    await this.authRepo.invalidatePreviousVerifyTokens(user.id);
 
-    const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
-    const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
-    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.OTP_EXPIRY_MINUTES * 60 * 1000);
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.VERIFY_LINK_EXPIRY_MINUTES * 60 * 1000);
 
-    await this.authRepo.createOtp({
+    await this.authRepo.createVerifyToken({
       userId: user.id,
-      type: OtpType.REGISTER,
-      otpHash,
+      tokenHash,
       expiresAt,
     });
 
-    await this.emailService.sendOtp({
+    const backendBaseUrl = (this.configService.get<string>('app.publicUrl') ?? 'http://localhost:3000').replace(
+      /\/$/,
+      '',
+    );
+    const prefixPath = API_PREFIX.replace(/^\/+/, '');
+    const verifyUrl = `${backendBaseUrl}/${prefixPath}/auth/verify-email?token=${rawToken}`;
+
+    await this.emailService.sendVerificationLink({
       to: email,
-      otp,
-      type: OtpType.REGISTER,
+      verifyUrl,
       fullName: user.fullName ?? undefined,
     });
 
-    this.logger.log(`Resend OTP sent to ${email}`);
-  }
-
-  private generateOtp(length: number): string {
-    return Array.from({ length }, () => randomInt(0, 10)).join('');
+    this.logger.log(`Resend verification link sent to ${email}`);
   }
 }

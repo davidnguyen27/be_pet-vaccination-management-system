@@ -2,7 +2,7 @@ import { SpeciesResponseDto } from '../application/dtos/species-res.dto';
 import { SpeciesEntity } from '../domain/species.entity';
 
 interface SpeciesRaw {
-  speciesId: string;
+  id: string;
   name: string;
   code: string;
   defaultVaccinePlan: boolean;
@@ -15,7 +15,7 @@ interface SpeciesRaw {
 export class SpeciesMapper {
   static toDomain(raw: SpeciesRaw): SpeciesEntity {
     return new SpeciesEntity({
-      id: raw.speciesId,
+      id: raw.id,
       name: raw.name,
       code: raw.code,
       defaultVaccinePlan: raw.defaultVaccinePlan,

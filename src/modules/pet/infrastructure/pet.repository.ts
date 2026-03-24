@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePetData, GetPetsFilter, IPetRepository, PaginatedResult, UpdatePetData } from '../domain/i-pet.entity';
+import { CreatePetData, PetParams, IPetRepository, UpdatePetData } from '../domain/i-pet.entity';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { PetEntity } from '../domain/pet.entity';
 import { PetMapper } from './pet.mapper';
+import type { PaginatedResult } from '@/shared/domain/paginated-result.type';
 
 @Injectable()
 export class PetRepository implements IPetRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: GetPetsFilter): Promise<PaginatedResult<PetEntity>> {
-    const { page, limit, search } = filter;
+  async findAll(params: PetParams): Promise<PaginatedResult<PetEntity>> {
+    const { page, limit, search, species } = params;
 
     const where = {
       isDeleted: false,
@@ -18,10 +19,10 @@ export class PetRepository implements IPetRepository {
             OR: [
               { name: { contains: search, mode: 'insensitive' as const } },
               { breed: { contains: search, mode: 'insensitive' as const } },
-              { color: { contains: search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
+      ...(species ? { species: { is: { code: species, isDeleted: false } } } : {}),
     };
 
     const [rows, total] = await Promise.all([
@@ -37,6 +38,7 @@ export class PetRepository implements IPetRepository {
               },
             },
           },
+          species: true,
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -55,7 +57,7 @@ export class PetRepository implements IPetRepository {
 
   async findById(petId: string): Promise<PetEntity | null> {
     const pet = await this.prisma.pet.findUnique({
-      where: { petId, isDeleted: false },
+      where: { id: petId, isDeleted: false },
       include: {
         owner: {
           include: {
@@ -66,6 +68,7 @@ export class PetRepository implements IPetRepository {
             },
           },
         },
+        species: true,
       },
     });
     return pet ? PetMapper.toDomain(pet) : null;
@@ -95,6 +98,7 @@ export class PetRepository implements IPetRepository {
             },
           },
         },
+        species: true,
       },
     });
 
@@ -103,7 +107,7 @@ export class PetRepository implements IPetRepository {
 
   async update(data: UpdatePetData): Promise<PetEntity> {
     const updated = await this.prisma.pet.update({
-      where: { petId: data.id },
+      where: { id: data.id },
       data: {
         ...(data.ownerId !== undefined && { ownerId: data.ownerId }),
         ...(data.speciesId !== undefined && { speciesId: data.speciesId }),
@@ -126,15 +130,16 @@ export class PetRepository implements IPetRepository {
             },
           },
         },
+        species: true,
       },
     });
 
     return PetMapper.toDomain(updated);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(petId: string): Promise<void> {
     await this.prisma.pet.update({
-      where: { petId: id },
+      where: { id: petId },
       data: { isDeleted: true },
     });
   }

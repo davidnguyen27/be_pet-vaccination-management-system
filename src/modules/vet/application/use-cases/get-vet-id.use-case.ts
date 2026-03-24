@@ -7,8 +7,8 @@ import { VetMapper } from '../../infrastructure/vet.mapper';
 export class GetVetIdUseCase {
   constructor(@Inject(I_VET_REPOSITORY) private readonly vetRepo: IVetRepository) {}
 
-  async execute(id: string): Promise<VetResponseDto> {
-    const vet = await this.vetRepo.findById(id);
+  async execute(userId: string): Promise<VetResponseDto> {
+    const vet = await this.vetRepo.findByUserId(userId);
     if (!vet) throw new NotFoundException('Vet not found');
     return VetMapper.toResponse(vet);
   }

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { I_VET_REPOSITORY } from '../domain/i-vet.repository';
 import { VetRepository } from '../infrastructure/vet.repository';
-import { UpdateVetUseCase } from '../application/use-cases/update-staff.use-case';
+import { UpdateVetUseCase } from '../application/use-cases/update-vet.use-case';
 import { GetVetIdUseCase } from '../application/use-cases/get-vet-id.use-case';
 import { GetVetsUseCase } from '../application/use-cases/get-vets.use-case';
 import { VetController } from './vet.controller';

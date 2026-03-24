@@ -1,14 +1,16 @@
+import { SpeciesMapper } from '@/modules/species/infrastructure/species.mapper';
 import { PetResponseDto } from '../application/dtos/pet-res.dto';
 import { PetEntity } from '../domain/pet.entity';
 import { OwnerMapper } from '@/modules/owner/infrastructure/owner.mapper';
 
 interface PetMapperRaw {
-  petId: string;
+  id: string;
   ownerId: string;
   owner?: Parameters<typeof OwnerMapper.toDomain>[0];
-  name: string;
   speciesId: string;
-  sex: PetEntity['sex'];
+  species?: Parameters<typeof SpeciesMapper.toDomain>[0];
+  name: string;
+  sex: string;
   dob: Date;
   weight: number;
   color: string;
@@ -23,11 +25,12 @@ interface PetMapperRaw {
 export class PetMapper {
   static toDomain(raw: PetMapperRaw): PetEntity {
     return new PetEntity({
-      id: raw.petId,
+      id: raw.id,
       ownerId: raw.ownerId,
       owner: raw.owner ? OwnerMapper.toDomain(raw.owner) : undefined,
       name: raw.name,
       speciesId: raw.speciesId,
+      species: raw.species ? SpeciesMapper.toDomain(raw.species) : undefined,
       sex: raw.sex,
       dob: raw.dob,
       weight: raw.weight,
@@ -44,10 +47,9 @@ export class PetMapper {
   static toResponse(pet: PetEntity): PetResponseDto {
     return new PetResponseDto({
       id: pet.id,
-      ownerId: pet.ownerId,
-      owner: pet.owner ? OwnerMapper.toResponse(pet.owner) : null,
+      owner: pet.owner ? OwnerMapper.toResponse(pet.owner) : undefined,
       name: pet.name,
-      speciesId: pet.speciesId,
+      species: pet.species ? SpeciesMapper.toResponse(pet.species) : undefined,
       sex: pet.sex,
       dob: pet.dob,
       weight: pet.weight,

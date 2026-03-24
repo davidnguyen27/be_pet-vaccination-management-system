@@ -1,96 +1,83 @@
 import { Injectable } from '@nestjs/common';
-import { OtpType } from '@/enums';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import { CreateOtpData, IAuthRepository, SaveRefreshTokenData } from '../../domain/i-auth.repository';
+import { IAuthRepository, SaveRefreshTokenData, CreateVerifyTokenData } from '../../domain/i-auth.repository';
 
 @Injectable()
 export class AuthRepository implements IAuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private get now(): Date {
+    return new Date();
+  }
+
   // user
   async activateUser(userId: string): Promise<void> {
     await this.prisma.user.update({
-      where: { userId },
+      where: { id: userId },
       data: { isActive: true },
     });
   }
 
-  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+  async changePassword(userId: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({
-      where: { userId },
+      where: { id: userId },
       data: { password: passwordHash },
     });
   }
 
   async updateLastLogin(userId: string): Promise<void> {
     await this.prisma.user.update({
-      where: { userId },
+      where: { id: userId },
       data: { lastLoginAt: new Date() },
     });
   }
 
-  // OTP
-  async createOtp(data: CreateOtpData): Promise<{ otpCodeId: string }> {
-    const record = await this.prisma.otpCode.create({
+  async createVerifyToken(data: CreateVerifyTokenData): Promise<void> {
+    await this.prisma.verifyToken.create({
       data: {
         userId: data.userId,
-        type: data.type,
-        otpHash: data.otpHash,
+        tokenHash: data.tokenHash,
+        redirectUrl: data.redirectUrl,
         expiresAt: data.expiresAt,
-        lastSentAt: new Date(),
+        sentCount: 1,
+        lastSentAt: this.now,
       },
     });
-    return { otpCodeId: record.otpCodeId };
   }
 
-  async findValidOtp(
-    userId: string,
-    type: OtpType,
-  ): Promise<{
-    otpCodeId: string;
-    otpHash: string;
-    resendCount: number;
+  async findValidVerifyTokenByHash(tokenHash: string): Promise<{
+    id: string;
+    userId: string;
+    redirectUrl?: string | null;
     expiresAt: Date;
-    verifiedAt: Date | null;
+    usedAt: Date | null;
   } | null> {
-    return await this.prisma.otpCode.findFirst({
+    return await this.prisma.verifyToken.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        redirectUrl: true,
+        expiresAt: true,
+        usedAt: true,
+      },
+    });
+  }
+
+  async markVerifyTokenUsed(id: string): Promise<void> {
+    await this.prisma.verifyToken.update({
+      where: { id },
+      data: { usedAt: this.now },
+    });
+  }
+
+  async invalidatePreviousVerifyTokens(userId: string): Promise<void> {
+    await this.prisma.verifyToken.updateMany({
       where: {
         userId,
-        type,
-        expiresAt: { gt: new Date() },
+        usedAt: null,
       },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        otpCodeId: true,
-        otpHash: true,
-        resendCount: true,
-        expiresAt: true,
-        verifiedAt: true,
-      },
-    });
-  }
-
-  async markOtpVerified(otpCodeId: string): Promise<void> {
-    await this.prisma.otpCode.update({
-      where: { otpCodeId },
-      data: { verifiedAt: new Date() },
-    });
-  }
-
-  async incrementOtpResend(otpCodeId: string): Promise<void> {
-    await this.prisma.otpCode.update({
-      where: { otpCodeId },
-      data: {
-        resendCount: { increment: 1 },
-        lastSentAt: new Date(),
-      },
-    });
-  }
-
-  async invalidatePreviousOtps(userId: string, type: OtpType): Promise<void> {
-    await this.prisma.otpCode.updateMany({
-      where: { userId, type, verifiedAt: null },
-      data: { expiresAt: new Date(0) },
+      data: { usedAt: this.now },
     });
   }
 
@@ -98,7 +85,7 @@ export class AuthRepository implements IAuthRepository {
   async saveRefreshToken(data: SaveRefreshTokenData): Promise<{ tokenId: string }> {
     const record = await this.prisma.refreshToken.create({
       data: {
-        ...(data.tokenId ? { tokenId: data.tokenId } : {}),
+        ...(data.tokenId ? { id: data.tokenId } : {}),
         userId: data.userId,
         tokenHash: data.tokenHash,
         expiresAt: data.expiresAt,
@@ -107,7 +94,7 @@ export class AuthRepository implements IAuthRepository {
         replacedByTokenId: data.replacedByTokenId,
       },
     });
-    return { tokenId: record.tokenId };
+    return { tokenId: record.id };
   }
 
   async findRefreshToken(tokenId: string): Promise<{
@@ -117,26 +104,37 @@ export class AuthRepository implements IAuthRepository {
     expiresAt: Date;
     revokedAt: Date | null;
   } | null> {
-    return await this.prisma.refreshToken.findUnique({
-      where: { tokenId },
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { id: tokenId },
       select: {
-        tokenId: true,
+        id: true,
         userId: true,
         tokenHash: true,
         expiresAt: true,
         revokedAt: true,
       },
     });
+
+    if (!record) return null;
+
+    return {
+      tokenId: record.id,
+      userId: record.userId,
+      tokenHash: record.tokenHash,
+      expiresAt: record.expiresAt,
+      revokedAt: record.revokedAt,
+    };
   }
 
-  async revokeRefreshToken(tokenId: string, replacedByTokenId?: string): Promise<void> {
-    await this.prisma.refreshToken.update({
-      where: { tokenId },
+  async revokeRefreshToken(tokenId: string, userId: string, replacedByTokenId?: string): Promise<number> {
+    const result = await this.prisma.refreshToken.updateMany({
+      where: { id: tokenId, userId, revokedAt: null },
       data: {
         revokedAt: new Date(),
         ...(replacedByTokenId ? { replacedByTokenId } : {}),
       },
     });
+    return result.count;
   }
 
   async revokeAllUserRefreshTokens(userId: string): Promise<void> {

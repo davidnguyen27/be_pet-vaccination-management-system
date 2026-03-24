@@ -1,12 +1,12 @@
-import { ResponseMessage } from '@/shared/decorators';
+import { Public, ResponseMessage } from '@/shared/decorators';
 import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { SpeciesQueryDto } from '../application/dtos/species-query.dto';
 import { GetSpeciesUseCase } from '../application/use-cases/get-species.use-case';
 import { GetSpeciesIdUseCase } from '../application/use-cases/get-species-id.use-case';
 
+@Public()
 @Controller('species')
-@ApiBearerAuth('access-token')
 export class SpeciesController {
   constructor(
     private readonly getSpeciesUseCase: GetSpeciesUseCase,

@@ -47,10 +47,13 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException('User not found or inactive');
     }
 
+    const newTokenId = randomUUID();
+
     const newPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
       roleCode: user.roleCode,
+      jti: newTokenId,
     };
 
     const newAccessToken = this.jwtService.sign(newPayload, {
@@ -58,14 +61,10 @@ export class RefreshTokenUseCase {
       expiresIn: (this.configService.get<string>('jwt.accessExpiresIn') ?? '1h') as unknown as number,
     });
 
-    const newTokenId = randomUUID();
-    const newRawRefreshToken = this.jwtService.sign(
-      { ...newPayload, jti: newTokenId },
-      {
-        secret: this.configService.get<string>('jwt.refreshSecret'),
-        expiresIn: (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as unknown as number,
-      },
-    );
+    const newRawRefreshToken = this.jwtService.sign(newPayload, {
+      secret: this.configService.get<string>('jwt.refreshSecret'),
+      expiresIn: (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as unknown as number,
+    });
 
     const newTokenHash = await bcrypt.hash(newRawRefreshToken, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
     const decodedAccess = this.jwtService.decode<{ exp: number }>(newAccessToken);
@@ -74,7 +73,7 @@ export class RefreshTokenUseCase {
     const expiresAt = new Date(decoded.exp * 1000);
 
     // Token rotation: revoke old token, link to new one
-    await this.authRepo.revokeRefreshToken(jti, newTokenId);
+    await this.authRepo.revokeRefreshToken(jti, user.id, newTokenId);
     await this.authRepo.saveRefreshToken({
       tokenId: newTokenId,
       userId: user.id,

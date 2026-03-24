@@ -8,14 +8,14 @@ import { OwnerMapper } from '../../infrastructure/owner.mapper';
 export class UpdateOwnerUseCase {
   constructor(@Inject(I_OWNER_REPOSITORY) private readonly ownerRepo: IOwnerRepository) {}
 
-  async execute(ownerId: string, dto: OwnerDto): Promise<OwnerResponseDto> {
-    const existing = await this.ownerRepo.findById(ownerId);
+  async execute(userId: string, dto: OwnerDto): Promise<OwnerResponseDto> {
+    const existing = await this.ownerRepo.findByUserId(userId);
     if (!existing) {
       throw new NotFoundException('Owner not found');
     }
 
     const updated = await this.ownerRepo.update({
-      id: ownerId,
+      userId,
       address: dto.address,
       locationLat: dto.locationLat,
       locationLng: dto.locationLng,

@@ -21,11 +21,6 @@ enum RoleCode {
   OWN
 }
 
-enum OtpType {
-  REGISTER
-  FORGOT_PASSWORD
-}
-
 enum gender {
   MALE
   FEMALE
@@ -189,7 +184,7 @@ enum service_price_type {
 }
 
 model User {
-  userId      String    @id @default(uuid()) @map("_id") @db.Uuid
+  id          String    @id @default(uuid()) @map("_id") @db.Uuid
   roleId      String    @map("role_id") @db.Uuid
   email       String    @unique @db.VarChar(255)
   password    String    @db.VarChar(255)
@@ -204,8 +199,8 @@ model User {
   updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  role          Role           @relation(fields: [roleId], references: [roleId])
-  otpCodes      OtpCode[]
+  role          Role           @relation(fields: [roleId], references: [id])
+  verifyTokens  VerifyToken[]
   refreshTokens RefreshToken[]
   notifications Notification[]
   staffProfile  StaffProfile?
@@ -218,7 +213,7 @@ model User {
 }
 
 model Role {
-  roleId      String    @id @default(uuid()) @map("_id") @db.Uuid
+  id          String    @id @default(uuid()) @map("_id") @db.Uuid
   code        RoleCode  @unique
   name        String    @unique @db.VarChar(255)
   description String?   @db.VarChar(255)
@@ -232,29 +227,27 @@ model Role {
   @@map("role")
 }
 
-model OtpCode {
-  otpCodeId   String    @id @default(uuid()) @map("_id") @db.Uuid
+model VerifyToken {
+  id          String    @id @default(uuid()) @map("_id") @db.Uuid
   userId      String    @map("user_id") @db.Uuid
-  type        OtpType   @map("type")
-  otpHash     String    @map("otp_hash") @db.VarChar(255)
-  otpSalt     String?   @map("otp_salt") @db.VarChar(50)
-  otpLength   Int       @default(6) @map("otp_length")
+  tokenHash   String    @unique @map("token_hash") @db.VarChar(255)
+  redirectUrl String?   @map("redirect_url") @db.VarChar(500)
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
-  verifiedAt  DateTime? @map("verified_at") @db.Timestamptz(6)
-  resendCount Int       @default(0) @map("resend_count")
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(6)
+  sentCount   Int       @default(0) @map("sent_count")
   lastSentAt  DateTime? @map("last_sent_at") @db.Timestamptz(6)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([expiresAt])
-  @@map("otp_code")
+  @@map("verify_token")
 }
 
 model RefreshToken {
-  tokenId           String    @id @default(uuid()) @map("_id") @db.Uuid
+  id                String    @id @default(uuid()) @map("_id") @db.Uuid
   userId            String    @map("user_id") @db.Uuid
   tokenHash         String    @unique @map("token_hash") @db.VarChar(255)
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
@@ -264,7 +257,7 @@ model RefreshToken {
   userAgent         String?   @map("user_agent") @db.VarChar(500)
   ipAddress         String?   @map("ip_address") @db.VarChar(50)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  user              User      @relation(fields: [userId], references: [userId])
+  user              User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([expiresAt])
@@ -272,13 +265,13 @@ model RefreshToken {
 }
 
 model StaffProfile {
-  profileId        String            @id @default(uuid()) @map("_id") @db.Uuid
+  id               String            @id @default(uuid()) @map("_id") @db.Uuid
   userId           String            @unique @map("user_id") @db.Uuid
   code             String            @unique @map("staff_code") @db.VarChar(30)
   jobTitle         String?           @map("job_title") @db.VarChar(100)
   department       String?           @db.VarChar(100)
-  employmentType   employment_type   @default(FULL_TIME) @map("employment_type")
-  employmentStatus employment_status @default(WORKING) @map("employment_status")
+  employmentType   employment_type   @map("employment_type")
+  employmentStatus employment_status @map("employment_status")
   joinDate         DateTime          @map("join_date") @db.Date
   endDate          DateTime?         @map("end_date") @db.Date
   address          String            @db.VarChar(255)
@@ -287,7 +280,7 @@ model StaffProfile {
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  user         User          @relation(fields: [userId], references: [userId])
+  user         User          @relation(fields: [userId], references: [id])
   appointments Appointment[]
 
   @@index([employmentStatus])
@@ -297,7 +290,7 @@ model StaffProfile {
 }
 
 model VetProfile {
-  profileId        String            @id @default(uuid()) @map("_id") @db.Uuid
+  id               String            @id @default(uuid()) @map("_id") @db.Uuid
   userId           String            @unique @map("user_id") @db.Uuid
   bio              String            @db.VarChar(255)
   licenseNo        String            @unique @map("license_no") @db.VarChar(50)
@@ -312,7 +305,7 @@ model VetProfile {
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  user             User              @relation(fields: [userId], references: [userId])
+  user             User              @relation(fields: [userId], references: [id])
   appointments     Appointment[]
   microchipRecords MicrochipRecord[]
   healthCerRecords HealthCerRecord[]
@@ -326,7 +319,7 @@ model VetProfile {
 }
 
 model OwnerProfile {
-  profileId   String   @id @default(uuid()) @map("_id") @db.Uuid
+  id          String   @id @default(uuid()) @map("_id") @db.Uuid
   userId      String   @unique @map("user_id") @db.Uuid
   address     String?  @db.VarChar(255)
   locationLat Float?   @map("location_lat")
@@ -335,7 +328,7 @@ model OwnerProfile {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  user          User           @relation(fields: [userId], references: [userId])
+  user          User           @relation(fields: [userId], references: [id])
   pets          Pet[]
   appointments  Appointment[]
   invoices      Invoice[]
@@ -347,7 +340,7 @@ model OwnerProfile {
 }
 
 model Species {
-  speciesId          String       @id @default(uuid()) @map("_id") @db.Uuid
+  id                 String       @id @default(uuid()) @map("_id") @db.Uuid
   code               species_code @unique
   name               String       @unique @db.VarChar(255)
   defaultVaccinePlan Boolean      @default(false) @map("default_vaccine_plan")
@@ -363,7 +356,7 @@ model Species {
 }
 
 model Pet {
-  petId        String    @id @default(uuid()) @map("_id") @db.Uuid
+  id           String    @id @default(uuid()) @map("_id") @db.Uuid
   speciesId    String    @map("species_id") @db.Uuid
   ownerId      String    @map("owner_id") @db.Uuid
   name         String    @db.VarChar(255)
@@ -379,8 +372,8 @@ model Pet {
   updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  species            Species             @relation(fields: [speciesId], references: [speciesId])
-  owner              OwnerProfile        @relation(fields: [ownerId], references: [profileId])
+  species            Species             @relation(fields: [speciesId], references: [id])
+  owner              OwnerProfile        @relation(fields: [ownerId], references: [id])
   appointments       Appointment[]
   vaccinationRecords VaccinationRecord[]
   microchipRecords   MicrochipRecord[]
@@ -395,7 +388,7 @@ model Pet {
 }
 
 model Appointment {
-  appointmentId     String             @id @default(uuid()) @map("_id") @db.Uuid
+  id                String             @id @default(uuid()) @map("_id") @db.Uuid
   petId             String             @map("pet_id") @db.Uuid
   appointmentType   appointment_type   @map("appointment_type")
   serviceType       service_type       @map("service_type")
@@ -415,11 +408,11 @@ model Appointment {
   cancelledAt       DateTime?          @map("cancelled_at") @db.Timestamptz(6)
   deletedAt         DateTime?          @map("deleted_at") @db.Timestamptz(6)
 
-  pet   Pet              @relation(fields: [petId], references: [petId])
-  slot  AppointmentSlot? @relation(fields: [slotId], references: [slotId])
-  staff StaffProfile?    @relation(fields: [staffId], references: [profileId])
-  vet   VetProfile?      @relation(fields: [vetId], references: [profileId])
-  owner OwnerProfile     @relation(fields: [ownerId], references: [profileId])
+  pet   Pet              @relation(fields: [petId], references: [id])
+  slot  AppointmentSlot? @relation(fields: [slotId], references: [id])
+  staff StaffProfile?    @relation(fields: [staffId], references: [id])
+  vet   VetProfile?      @relation(fields: [vetId], references: [id])
+  owner OwnerProfile     @relation(fields: [ownerId], references: [id])
 
   vaccinationRecords VaccinationRecord[]
   microchipRecords   MicrochipRecord[]
@@ -437,7 +430,7 @@ model Appointment {
 }
 
 model Vaccine {
-  vaccineId          String         @id @default(uuid()) @map("_id") @db.Uuid
+  id                 String         @id @default(uuid()) @map("_id") @db.Uuid
   speciesId          String         @map("species_id") @db.Uuid
   code               String         @unique @db.VarChar(50)
   name               String         @unique @db.VarChar(255)
@@ -453,7 +446,7 @@ model Vaccine {
   updatedAt          DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt          DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
-  species      Species       @relation(fields: [speciesId], references: [speciesId])
+  species      Species       @relation(fields: [speciesId], references: [id])
   vaccineLots  VaccineLot[]
   vaccinePlans VaccinePlan[]
 
@@ -466,7 +459,7 @@ model Vaccine {
 }
 
 model VaccineLot {
-  lotId           String     @id @default(uuid()) @map("_id") @db.Uuid
+  id              String     @id @default(uuid()) @map("_id") @db.Uuid
   vaccineId       String     @map("vaccine_id") @db.Uuid
   lotNo           String     @map("lot_no") @db.VarChar(80)
   mfgDate         DateTime   @map("mfg_date") @db.Date
@@ -481,7 +474,7 @@ model VaccineLot {
   updatedAt       DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  vaccine            Vaccine             @relation(fields: [vaccineId], references: [vaccineId])
+  vaccine            Vaccine             @relation(fields: [vaccineId], references: [id])
   vaccinationRecords VaccinationRecord[]
 
   @@index([vaccineId])
@@ -491,7 +484,7 @@ model VaccineLot {
 }
 
 model VaccinationRecord {
-  recordId       String             @id @default(uuid()) @map("_id") @db.Uuid
+  id             String             @id @default(uuid()) @map("_id") @db.Uuid
   appointmentId  String?            @map("appointment_id") @db.Uuid
   petId          String             @map("pet_id") @db.Uuid
   vaccineLotId   String             @map("vaccine_lot_id") @db.Uuid
@@ -502,9 +495,9 @@ model VaccinationRecord {
   createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [appointmentId])
-  vaccineLot   VaccineLot    @relation(fields: [vaccineLotId], references: [lotId])
-  pet          Pet           @relation(fields: [petId], references: [petId])
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
+  vaccineLot   VaccineLot    @relation(fields: [vaccineLotId], references: [id])
+  pet          Pet           @relation(fields: [petId], references: [id])
   invoiceItems InvoiceItem[]
   vaccinePlan  VaccinePlan?
 
@@ -512,7 +505,7 @@ model VaccinationRecord {
 }
 
 model VaccinePlan {
-  planId              String      @id @default(uuid()) @map("_id") @db.Uuid
+  id                  String      @id @default(uuid()) @map("_id") @db.Uuid
   petId               String      @map("pet_id") @db.Uuid
   vaccineId           String      @map("vaccine_id") @db.Uuid
   doseNo              Int         @map("dose_no")
@@ -530,9 +523,9 @@ model VaccinePlan {
   updatedAt           DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt           DateTime?   @map("deleted_at") @db.Timestamptz(6)
 
-  pet               Pet                @relation(fields: [petId], references: [petId])
-  vaccine           Vaccine            @relation(fields: [vaccineId], references: [vaccineId])
-  vaccinationRecord VaccinationRecord? @relation(fields: [vaccinationRecordId], references: [recordId])
+  pet               Pet                @relation(fields: [petId], references: [id])
+  vaccine           Vaccine            @relation(fields: [vaccineId], references: [id])
+  vaccinationRecord VaccinationRecord? @relation(fields: [vaccinationRecordId], references: [id])
 
   @@index([petId, vaccineId, doseNo])
   @@index([petId])
@@ -543,7 +536,7 @@ model VaccinePlan {
 }
 
 model MicrochipBatch {
-  batchId       String    @id @default(uuid()) @map("_id") @db.Uuid
+  id            String    @id @default(uuid()) @map("_id") @db.Uuid
   batchNo       String    @unique @map("batch_no") @db.VarChar(80)
   vendorName    String    @db.VarChar(150)
   manufacturer  String    @db.VarChar(150)
@@ -562,7 +555,7 @@ model MicrochipBatch {
 }
 
 model Microchip {
-  microchipId   String           @id @default(uuid()) @map("_id") @db.Uuid
+  id            String           @id @default(uuid()) @map("_id") @db.Uuid
   batchId       String           @map("batch_id") @db.Uuid
   microchipCode String           @unique @map("microchip_code") @db.VarChar(50)
   status        microchip_status @default(AVAILABLE) @map("status")
@@ -572,8 +565,8 @@ model Microchip {
   updatedAt     DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
-  microchipBatch   MicrochipBatch    @relation(fields: [batchId], references: [batchId])
-  pet              Pet?              @relation(fields: [petId], references: [petId])
+  microchipBatch   MicrochipBatch    @relation(fields: [batchId], references: [id])
+  pet              Pet?              @relation(fields: [petId], references: [id])
   microchipRecords MicrochipRecord[]
 
   @@index([batchId])
@@ -584,7 +577,7 @@ model Microchip {
 }
 
 model MicrochipRecord {
-  recordId        String   @id @default(uuid()) @map("_id") @db.Uuid
+  id              String   @id @default(uuid()) @map("_id") @db.Uuid
   appointmentId   String?  @map("appointment_id") @db.Uuid
   vetId           String   @map("vet_id") @db.Uuid
   petId           String   @map("pet_id") @db.Uuid
@@ -595,10 +588,10 @@ model MicrochipRecord {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [appointmentId])
-  vet           VetProfile    @relation(fields: [vetId], references: [profileId])
-  microchipItem Microchip     @relation(fields: [microchipItemId], references: [microchipId])
-  pet           Pet           @relation(fields: [petId], references: [petId])
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
+  vet           VetProfile    @relation(fields: [vetId], references: [id])
+  microchipItem Microchip     @relation(fields: [microchipItemId], references: [id])
+  pet           Pet           @relation(fields: [petId], references: [id])
   invoiceItems  InvoiceItem[]
 
   @@index([appointmentId])
@@ -608,7 +601,7 @@ model MicrochipRecord {
 }
 
 model HealthCerRecord {
-  recordId        String   @id @default(uuid()) @map("_id") @db.Uuid
+  id              String   @id @default(uuid()) @map("_id") @db.Uuid
   appointmentId   String?  @map("appointment_id") @db.Uuid
   petId           String   @map("pet_id") @db.Uuid
   vetId           String   @map("vet_id") @db.Uuid
@@ -627,9 +620,9 @@ model HealthCerRecord {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [appointmentId])
-  vet          VetProfile    @relation(fields: [vetId], references: [profileId])
-  pet          Pet           @relation(fields: [petId], references: [petId])
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
+  vet          VetProfile    @relation(fields: [vetId], references: [id])
+  pet          Pet           @relation(fields: [petId], references: [id])
   invoiceItems InvoiceItem[]
 
   @@index([appointmentId])
@@ -639,7 +632,7 @@ model HealthCerRecord {
 }
 
 model Invoice {
-  invoiceId     String         @id @default(uuid()) @map("_id") @db.Uuid
+  id            String         @id @default(uuid()) @map("_id") @db.Uuid
   appointmentId String         @map("appointment_id") @db.Uuid
   ownerId       String         @map("owner_id") @db.Uuid
   invoiceCode   String         @unique @map("invoice_code") @db.VarChar(50)
@@ -660,8 +653,8 @@ model Invoice {
   updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
-  appointment     Appointment      @relation(fields: [appointmentId], references: [appointmentId])
-  owner           OwnerProfile     @relation(fields: [ownerId], references: [profileId])
+  appointment     Appointment      @relation(fields: [appointmentId], references: [id])
+  owner           OwnerProfile     @relation(fields: [ownerId], references: [id])
   invoiceItems    InvoiceItem[]
   payments        Payment[]
   ownerVouchers   OwnerVoucher[]
@@ -677,7 +670,7 @@ model Invoice {
 }
 
 model InvoiceItem {
-  invoiceItemId       String            @id @default(uuid()) @map("_id") @db.Uuid
+  id                  String            @id @default(uuid()) @map("_id") @db.Uuid
   invoiceId           String            @map("invoice_id") @db.Uuid
   itemName            String            @map("item_name") @db.VarChar(255)
   itemType            invoice_item_type @map("item_type")
@@ -693,10 +686,10 @@ model InvoiceItem {
   updatedAt           DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  vaccinationRecord VaccinationRecord? @relation(fields: [vaccinationRecordId], references: [recordId])
-  microchipRecord   MicrochipRecord?   @relation(fields: [microchipRecordId], references: [recordId])
-  healthCertificate HealthCerRecord?   @relation(fields: [healthCerRecordId], references: [recordId])
-  invoice           Invoice            @relation(fields: [invoiceId], references: [invoiceId])
+  vaccinationRecord VaccinationRecord? @relation(fields: [vaccinationRecordId], references: [id])
+  microchipRecord   MicrochipRecord?   @relation(fields: [microchipRecordId], references: [id])
+  healthCertificate HealthCerRecord?   @relation(fields: [healthCerRecordId], references: [id])
+  invoice           Invoice            @relation(fields: [invoiceId], references: [id])
 
   @@index([invoiceId])
   @@index([itemType])
@@ -705,7 +698,7 @@ model InvoiceItem {
 }
 
 model Payment {
-  paymentId      String         @id @default(uuid()) @map("_id") @db.Uuid
+  id             String         @id @default(uuid()) @map("_id") @db.Uuid
   invoiceId      String         @map("invoice_id") @db.Uuid
   ownerId        String         @map("owner_id") @db.Uuid
   amount         Float          @map("amount")
@@ -722,8 +715,8 @@ model Payment {
   updatedAt      DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
-  invoice Invoice      @relation(fields: [invoiceId], references: [invoiceId])
-  owner   OwnerProfile @relation(fields: [ownerId], references: [profileId])
+  invoice Invoice      @relation(fields: [invoiceId], references: [id])
+  owner   OwnerProfile @relation(fields: [ownerId], references: [id])
 
   @@index([invoiceId])
   @@index([ownerId])
@@ -734,7 +727,7 @@ model Payment {
 }
 
 model Voucher {
-  voucherId        String         @id @default(uuid()) @map("_id") @db.Uuid
+  id               String         @id @default(uuid()) @map("_id") @db.Uuid
   code             String         @unique @db.VarChar(50)
   name             String         @db.VarChar(255)
   description      String?        @db.VarChar(255)
@@ -764,23 +757,23 @@ model Voucher {
 }
 
 model OwnerVoucher {
-  ownerVoucherId String               @id @default(uuid()) @map("_id") @db.Uuid
-  ownerId        String               @map("owner_id") @db.Uuid
-  voucherId      String               @map("voucher_id") @db.Uuid
-  status         owner_voucher_status @map("status")
-  assignedAt     DateTime             @map("assigned_at") @db.Timestamptz(6)
-  usedAt         DateTime?            @map("used_at") @db.Timestamptz(6)
-  invoiceId      String?              @map("invoice_id") @db.Uuid
-  expiresAt      DateTime             @map("expires_at") @db.Timestamptz(6)
-  notes          String?              @map("notes") @db.VarChar(255)
-  isDeleted      Boolean              @default(false) @map("is_deleted")
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
-  deletedAt      DateTime?            @map("deleted_at") @db.Timestamptz(6)
+  id         String               @id @default(uuid()) @map("_id") @db.Uuid
+  ownerId    String               @map("owner_id") @db.Uuid
+  voucherId  String               @map("voucher_id") @db.Uuid
+  status     owner_voucher_status @map("status")
+  assignedAt DateTime             @map("assigned_at") @db.Timestamptz(6)
+  usedAt     DateTime?            @map("used_at") @db.Timestamptz(6)
+  invoiceId  String?              @map("invoice_id") @db.Uuid
+  expiresAt  DateTime             @map("expires_at") @db.Timestamptz(6)
+  notes      String?              @map("notes") @db.VarChar(255)
+  isDeleted  Boolean              @default(false) @map("is_deleted")
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime?            @map("deleted_at") @db.Timestamptz(6)
 
-  owner           OwnerProfile     @relation(fields: [ownerId], references: [profileId])
-  voucher         Voucher          @relation(fields: [voucherId], references: [voucherId])
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [invoiceId])
+  owner           OwnerProfile     @relation(fields: [ownerId], references: [id])
+  voucher         Voucher          @relation(fields: [voucherId], references: [id])
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
   invoiceVouchers InvoiceVoucher[]
 
   @@index([ownerId])
@@ -793,23 +786,23 @@ model OwnerVoucher {
 }
 
 model InvoiceVoucher {
-  invoiceVoucherId String        @id @default(uuid()) @map("_id") @db.Uuid
-  invoiceId        String        @map("invoice_id") @db.Uuid
-  voucherId        String        @map("voucher_id") @db.Uuid
-  ownerVoucherId   String?       @map("owner_voucher_id") @db.Uuid
-  discountType     discount_type @map("discount_type")
-  discountValue    Float         @map("discount_value")
-  discountAmount   Float         @map("discount_amount")
-  appliedAt        DateTime      @map("applied_at") @db.Timestamptz(6)
-  notes            String?       @db.VarChar(255)
-  isDeleted        Boolean       @default(false) @map("is_deleted")
-  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
-  deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  id             String        @id @default(uuid()) @map("_id") @db.Uuid
+  invoiceId      String        @map("invoice_id") @db.Uuid
+  voucherId      String        @map("voucher_id") @db.Uuid
+  ownerVoucherId String?       @map("owner_voucher_id") @db.Uuid
+  discountType   discount_type @map("discount_type")
+  discountValue  Float         @map("discount_value")
+  discountAmount Float         @map("discount_amount")
+  appliedAt      DateTime      @map("applied_at") @db.Timestamptz(6)
+  notes          String?       @db.VarChar(255)
+  isDeleted      Boolean       @default(false) @map("is_deleted")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
-  invoice      Invoice       @relation(fields: [invoiceId], references: [invoiceId])
-  voucher      Voucher       @relation(fields: [voucherId], references: [voucherId])
-  ownerVoucher OwnerVoucher? @relation(fields: [ownerVoucherId], references: [ownerVoucherId])
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id])
+  voucher      Voucher       @relation(fields: [voucherId], references: [id])
+  ownerVoucher OwnerVoucher? @relation(fields: [ownerVoucherId], references: [id])
 
   @@index([invoiceId])
   @@index([voucherId])
@@ -820,7 +813,7 @@ model InvoiceVoucher {
 }
 
 model LoyaltyPoint {
-  pointId       String       @id @default(uuid()) @map("_id") @db.Uuid
+  id            String       @id @default(uuid()) @map("_id") @db.Uuid
   ownerId       String       @map("owner_id") @db.Uuid
   invoiceId     String?      @map("invoice_id") @db.Uuid
   type          loyalty_type @map("type")
@@ -830,8 +823,8 @@ model LoyaltyPoint {
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  owner   OwnerProfile @relation(fields: [ownerId], references: [profileId])
-  invoice Invoice?     @relation(fields: [invoiceId], references: [invoiceId])
+  owner   OwnerProfile @relation(fields: [ownerId], references: [id])
+  invoice Invoice?     @relation(fields: [invoiceId], references: [id])
 
   @@index([ownerId])
   @@index([invoiceId])
@@ -855,7 +848,7 @@ model Notification {
   createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([type])
@@ -866,7 +859,7 @@ model Notification {
 }
 
 model WorkingShift {
-  shiftId         String    @id @default(uuid()) @map("_id") @db.Uuid
+  id              String    @id @default(uuid()) @map("_id") @db.Uuid
   vetId           String    @map("vet_id") @db.Uuid
   dayOfWeek       weekday   @map("day_of_week")
   startTime       DateTime  @map("start_time") @db.Time
@@ -879,7 +872,7 @@ model WorkingShift {
   updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  vet              VetProfile        @relation(fields: [vetId], references: [profileId])
+  vet              VetProfile        @relation(fields: [vetId], references: [id])
   appointmentSlots AppointmentSlot[]
 
   @@index([vetId])
@@ -889,7 +882,7 @@ model WorkingShift {
 }
 
 model AppointmentSlot {
-  slotId          String    @id @default(uuid()) @map("_id") @db.Uuid
+  id              String    @id @default(uuid()) @map("_id") @db.Uuid
   shiftId         String    @map("shift_id") @db.Uuid
   vetId           String    @map("vet_id") @db.Uuid
   slotDate        DateTime  @map("slot_date") @db.Date
@@ -902,8 +895,8 @@ model AppointmentSlot {
   updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  shift        WorkingShift  @relation(fields: [shiftId], references: [shiftId])
-  vet          VetProfile    @relation(fields: [vetId], references: [profileId])
+  shift        WorkingShift  @relation(fields: [shiftId], references: [id])
+  vet          VetProfile    @relation(fields: [vetId], references: [id])
   appointments Appointment[]
 
   @@unique([shiftId, slotDate, startTime])
@@ -914,18 +907,18 @@ model AppointmentSlot {
 }
 
 model BlockTime {
-  blockTimeId String     @id @default(uuid()) @map("_id") @db.Uuid
-  vetId       String     @map("vet_id") @db.Uuid
-  type        block_type @default(TIME_OFF) @map("type")
-  startAt     DateTime   @map("start_at") @db.Timestamptz(6)
-  endAt       DateTime   @map("end_at") @db.Timestamptz(6)
-  reason      String?    @map("reason") @db.VarChar(255)
-  isDeleted   Boolean    @default(false) @map("is_deleted")
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
-  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  id        String     @id @default(uuid()) @map("_id") @db.Uuid
+  vetId     String     @map("vet_id") @db.Uuid
+  type      block_type @default(TIME_OFF) @map("type")
+  startAt   DateTime   @map("start_at") @db.Timestamptz(6)
+  endAt     DateTime   @map("end_at") @db.Timestamptz(6)
+  reason    String?    @map("reason") @db.VarChar(255)
+  isDeleted Boolean    @default(false) @map("is_deleted")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  vet VetProfile @relation(fields: [vetId], references: [profileId])
+  vet VetProfile @relation(fields: [vetId], references: [id])
 
   @@index([vetId])
   @@index([startAt])
@@ -935,7 +928,7 @@ model BlockTime {
 }
 
 model ServicePrice {
-  priceId       String             @id @default(uuid()) @map("_id") @db.Uuid
+  id            String             @id @default(uuid()) @map("_id") @db.Uuid
   type          service_price_type @map("type")
   referenceId   String?            @map("reference_id") @db.Uuid
   name          String             @db.VarChar(255)
@@ -957,7 +950,7 @@ model ServicePrice {
 }
 
 model ImgGallery {
-  galleryId String    @id @default(uuid()) @map("_id") @db.Uuid
+  id        String    @id @default(uuid()) @map("_id") @db.Uuid
   imgUrl    String    @map("img_url") @db.VarChar(255)
   isDeleted Boolean   @default(false) @map("is_deleted")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

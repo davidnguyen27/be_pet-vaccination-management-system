@@ -1,11 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { StaffQueryDto } from '../application/dtos/staff-query.dto';
 import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { GetStaffsUseCase } from '../application/use-cases/get-staffs.use-case';
-import { ResponseMessage } from '@/shared/decorators';
+import { ResponseMessage, Roles } from '@/shared/decorators';
 import { GetStaffIdUseCase } from '../application/use-cases/get-staff-id.use-case';
 import { StaffDto } from '../application/dtos/staff-req.dto';
 import { UpdateStaffUseCase } from '../application/use-cases/update-staff.use-case';
+import { RoleCode } from '@/enums';
 
 @Controller('staff')
 @ApiBearerAuth('access-token')
@@ -17,8 +18,8 @@ export class StaffController {
   ) {}
 
   @Get()
+  @Roles(RoleCode.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get all staffs successfully.')
   @ApiOperation({ summary: 'Get all staffs' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -27,19 +28,20 @@ export class StaffController {
     return this.getStaffsUseCase.execute(query);
   }
 
-  @Get(':id')
+  @Get(':userId')
+  @Roles(RoleCode.STAFF, RoleCode.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get staff by id successfully.')
-  @ApiOperation({ summary: 'Get staff by id' })
-  getStaffById(@Query('id') id: string) {
-    return this.getStaffByIdUseCase.execute(id);
+  @ApiOperation({ summary: 'Get staff by userId' })
+  getStaffById(@Param('userId') userId: string) {
+    return this.getStaffByIdUseCase.execute(userId);
   }
 
-  @Patch(':id')
+  @Patch(':userId')
+  @Roles(RoleCode.STAFF, RoleCode.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Update staff successfully.')
+  @ResponseMessage('Update successfully.')
   @ApiOperation({ summary: 'Update staff' })
-  updateStaff(@Query('id') id: string, @Body() dto: StaffDto) {
-    return this.updateStaffUseCase.execute(id, dto);
+  updateStaff(@Param('userId') userId: string, @Body() dto: StaffDto) {
+    return this.updateStaffUseCase.execute(userId, dto);
   }
 }

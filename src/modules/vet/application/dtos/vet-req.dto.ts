@@ -1,45 +1,55 @@
 import { employment_status } from '@/enums';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class VetDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  bio!: string;
+  @IsOptional()
+  bio?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  licenseNo!: string;
+  @IsOptional()
+  licenseNo?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  licenseIssueBy!: string;
+  @IsOptional()
+  licenseIssueBy?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsDateString()
-  licenseValidFrom!: Date;
+  @IsOptional()
+  licenseValidFrom?: Date;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsDateString()
-  licenseValidTo!: Date;
+  @IsOptional()
+  licenseValidTo?: Date;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsDateString()
-  joinDate!: Date;
+  @IsOptional()
+  joinDate?: Date;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ nullable: true })
   @IsDateString()
-  endDate!: Date | null;
+  @IsOptional()
+  endDate?: Date | null;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  address!: string;
+  @IsOptional()
+  address?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  citizenId!: string;
+  @IsOptional()
+  citizenId?: string;
 
-  @ApiProperty()
-  @IsString()
-  employmentStatus!: employment_status;
+  @ApiPropertyOptional({ enum: employment_status })
+  @IsEnum(employment_status)
+  @IsOptional()
+  employmentStatus?: employment_status;
 }

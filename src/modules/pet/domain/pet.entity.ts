@@ -1,6 +1,6 @@
 import { BaseEntity } from '@/shared/domain/base.entity';
 import { OwnerEntity } from '@/modules/owner/domain/owner.entity';
-import { gender } from '../../../../generated/prisma/enums';
+import { SpeciesEntity } from '@/modules/species/domain/species.entity';
 
 interface PetProps {
   id: string;
@@ -8,7 +8,8 @@ interface PetProps {
   owner?: OwnerEntity;
   name: string;
   speciesId: string;
-  sex: gender;
+  species?: SpeciesEntity;
+  sex: string;
   dob: Date;
   weight: number;
   color: string;
@@ -25,7 +26,8 @@ export class PetEntity extends BaseEntity {
   owner?: OwnerEntity;
   name!: string;
   speciesId!: string;
-  sex!: gender;
+  species?: SpeciesEntity;
+  sex!: string;
   dob!: Date;
   weight!: number;
   color!: string;

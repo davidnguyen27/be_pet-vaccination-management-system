@@ -1,14 +1,14 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PetResponseDto } from '../dtos/pet-res.dto';
-import { UpdatePetDto } from '../dtos/pet-update.dto';
 import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
 import { PetMapper } from '../../infrastructure/pet.mapper';
+import { PetDto } from '../dtos/pet-req.dto';
 
 @Injectable()
 export class UpdatePetUseCase {
   constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
 
-  async execute(petId: string, dto: UpdatePetDto): Promise<PetResponseDto> {
+  async execute(petId: string, dto: PetDto): Promise<PetResponseDto> {
     const existing = await this.petRepo.findById(petId);
     if (!existing) {
       throw new NotFoundException('Pet not found');

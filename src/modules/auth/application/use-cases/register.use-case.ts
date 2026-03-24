@@ -1,14 +1,14 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
-import { OtpType, RoleCode } from '@/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { I_EMAIL_SERVICE } from '../ports/i-email.service';
-import type { IEmailService } from '../ports/i-email.service';
+import { createHash, randomBytes } from 'crypto';
+import { RoleCode } from '@/enums';
+import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
 import { RegisterDto } from '../dtos/auth-req.dto';
 import { AUTH_CONSTANTS } from '@/constants/auth';
+import { API_PREFIX } from '@/constants';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RegisterUseCase {
@@ -18,6 +18,7 @@ export class RegisterUseCase {
     @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
     @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(dto: RegisterDto): Promise<void> {
@@ -26,10 +27,21 @@ export class RegisterUseCase {
       throw new ConflictException('Email has already been registered');
     }
 
+    if (existing?.isDeleted) {
+      throw new ConflictException('This account has been deleted and cannot be re-registered');
+    }
+
+    if (existing && existing.roleCode !== (RoleCode.OWN as string)) {
+      throw new ConflictException('Email already belongs to a non-owner account');
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
 
+    this.logger.debug(`Register with: `, existing);
+
     if (existing) {
-      await this.authRepo.updatePassword(existing.id, passwordHash);
+      await this.authRepo.changePassword(existing.id, passwordHash);
+      await this.userRepo.ensureOwnerProfile(existing.id);
     }
 
     const user =
@@ -38,35 +50,36 @@ export class RegisterUseCase {
         email: dto.email,
         passwordHash,
         roleCode: RoleCode.OWN,
+        isActive: false,
         fullName: dto.fullName,
       }));
 
-    // Invalidate any existing OTPs for this user/type
-    await this.authRepo.invalidatePreviousOtps(user.id, OtpType.REGISTER);
+    await this.authRepo.invalidatePreviousVerifyTokens(user.id);
 
-    // Generate OTP
-    const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
-    const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
-    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.OTP_EXPIRY_MINUTES * 60 * 1000);
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.VERIFY_LINK_EXPIRY_MINUTES * 60 * 1000);
 
-    await this.authRepo.createOtp({
+    await this.authRepo.createVerifyToken({
       userId: user.id,
-      type: OtpType.REGISTER,
-      otpHash,
+      tokenHash,
       expiresAt,
+      redirectUrl: AUTH_CONSTANTS.TOKEN_PURPOSE.VERIFY_EMAIL,
     });
 
-    await this.emailService.sendOtp({
+    const backendBaseUrl = (this.configService.get<string>('app.publicUrl') ?? 'http://localhost:3000').replace(
+      /\/$/,
+      '',
+    );
+    const prefixPath = API_PREFIX.replace(/^\/+/, '');
+    const verifyUrl = `${backendBaseUrl}/${prefixPath}/auth/verify-email?token=${rawToken}`;
+
+    await this.emailService.sendVerificationLink({
       to: dto.email,
-      otp,
-      type: OtpType.REGISTER,
+      verifyUrl,
       fullName: dto.fullName,
     });
 
-    this.logger.log(`Registration OTP sent to ${dto.email}`);
-  }
-
-  private generateOtp(length: number): string {
-    return Array.from({ length }, () => randomInt(0, 10)).join('');
+    this.logger.log(`Registration verification link sent to ${dto.email}`);
   }
 }

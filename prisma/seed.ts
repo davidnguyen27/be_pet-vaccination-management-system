@@ -1,10 +1,9 @@
 import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
-import { RoleCode } from '../generated/prisma/enums';
+import { RoleCode, species_code } from '../generated/prisma/enums';
 import { prisma } from '../src/lib/prisma';
 
 // Roles
-
 const ROLES: { code: RoleCode; name: string; description: string }[] = [
   { code: RoleCode.ADMIN, name: 'Administrator', description: 'Full system access' },
   { code: RoleCode.STAFF, name: 'Staff', description: 'Clinic staff member' },
@@ -12,15 +11,19 @@ const ROLES: { code: RoleCode; name: string; description: string }[] = [
   { code: RoleCode.OWN, name: 'Owner', description: 'Pet owner / client' },
 ];
 
-// Admin credentials
+// Species
+const SPECIES: { code: species_code; name: string; defaultVaccinePlan: boolean }[] = [
+  { code: species_code.CAT, name: 'Cat', defaultVaccinePlan: true },
+  { code: species_code.DOG, name: 'Dog', defaultVaccinePlan: true },
+];
 
+// Admin credentials
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@petclinic.vn';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 const ADMIN_FULL_NAME = process.env.ADMIN_FULL_NAME ?? 'System Administrator';
 const BCRYPT_ROUNDS = 12;
 
 // Seed
-
 async function main() {
   console.log('[...] Starting seed...\n');
 
@@ -34,12 +37,22 @@ async function main() {
     console.log(` [✔]  Role [${role.code}] "${role.name}" ready`);
   }
 
-  // 2. Find the ADMIN role
+  // 2. Upsert all species
+  for (const specie of SPECIES) {
+    await prisma.species.upsert({
+      where: { code: specie.code },
+      update: { name: specie.name, defaultVaccinePlan: specie.defaultVaccinePlan },
+      create: { code: specie.code, name: specie.name, defaultVaccinePlan: specie.defaultVaccinePlan },
+    });
+    console.log(` [✔]  Species [${specie.code}] "${specie.name}" ready`);
+  }
+
+  // 3. Find the ADMIN role
   const adminRole = await prisma.role.findUniqueOrThrow({
     where: { code: RoleCode.ADMIN },
   });
 
-  // 3. Upsert the initial admin user
+  // 4. Upsert the initial admin user
   const existingAdmin = await prisma.user.findUnique({
     where: { email: ADMIN_EMAIL },
   });
@@ -54,7 +67,7 @@ async function main() {
         email: ADMIN_EMAIL,
         password: passwordHash,
         fullName: ADMIN_FULL_NAME,
-        roleId: adminRole.roleId,
+        roleId: adminRole.id,
         isActive: true,
       },
     });

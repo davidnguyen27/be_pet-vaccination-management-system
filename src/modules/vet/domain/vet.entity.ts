@@ -1,7 +1,8 @@
 import { employment_status } from '@/enums';
 import { UserEntity } from '@/modules/user/domain/user.entity';
+import { BaseEntity } from '@/shared/domain/base.entity';
 
-interface VetProps {
+export interface VetProps {
   id: string;
   user: UserEntity;
   bio: string;
@@ -18,8 +19,7 @@ interface VetProps {
   updatedAt: Date;
 }
 
-export class VetEntity {
-  id!: string;
+export class VetEntity extends BaseEntity {
   user!: UserEntity;
   bio!: string;
   licenseNo!: string;
@@ -31,10 +31,9 @@ export class VetEntity {
   address!: string;
   citizenId!: string;
   employmentStatus!: employment_status;
-  createdAt!: Date;
-  updatedAt!: Date;
 
   constructor(props: VetProps) {
+    super(props);
     Object.assign(this, props);
   }
 }

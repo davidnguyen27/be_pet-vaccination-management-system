@@ -1,14 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
-import { OtpType } from '@/enums';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { I_EMAIL_SERVICE } from '../ports/i-email.service';
-import type { IEmailService } from '../ports/i-email.service';
+import { createHash, randomBytes } from 'crypto';
 import { ForgotPasswordDto } from '../dtos/auth-req.dto';
-import { AUTH_CONSTANTS } from '@/constants/auth';
+import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
 import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { AUTH_CONSTANTS } from '@/constants/auth';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ForgotPasswordUseCase {
@@ -18,39 +15,40 @@ export class ForgotPasswordUseCase {
     @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
     @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(dto: ForgotPasswordDto): Promise<void> {
     const user = await this.userRepo.findByEmail(dto.email);
-    // Always return same message to prevent user enumeration
     if (!user || !user.isActive || user.isDeleted) {
       return;
     }
 
-    await this.authRepo.invalidatePreviousOtps(user.id, OtpType.FORGOT_PASSWORD);
+    await this.authRepo.invalidatePreviousVerifyTokens(user.id);
 
-    const otp = this.generateOtp(AUTH_CONSTANTS.OTP_LENGTH);
-    const otpHash = await bcrypt.hash(otp, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
-    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.OTP_EXPIRY_MINUTES * 60 * 1000);
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.VERIFY_LINK_EXPIRY_MINUTES * 60 * 1000);
 
-    await this.authRepo.createOtp({
+    await this.authRepo.createVerifyToken({
       userId: user.id,
-      type: OtpType.FORGOT_PASSWORD,
-      otpHash,
+      tokenHash,
       expiresAt,
+      redirectUrl: AUTH_CONSTANTS.TOKEN_PURPOSE.RESET_PASSWORD,
     });
 
-    await this.emailService.sendOtp({
-      to: dto.email,
-      otp,
-      type: OtpType.FORGOT_PASSWORD,
+    const frontendBaseUrl = (this.configService.get<string>('app.frontendUrl') ?? 'http://localhost:5173').replace(
+      /\/$/,
+      '',
+    );
+    const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}`;
+
+    await this.emailService.sendResetPasswordLink({
+      to: user.email,
+      resetUrl,
       fullName: user.fullName ?? undefined,
     });
 
-    this.logger.log(`Forgot-password OTP sent to ${dto.email}`);
-  }
-
-  private generateOtp(length: number): string {
-    return Array.from({ length }, () => randomInt(0, 10)).join('');
+    this.logger.log(`Reset password link sent to ${user.email}`);
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { RoleCode } from '@/enums';
 import { Roles, ResponseMessage } from '@/shared/decorators';
@@ -20,7 +20,6 @@ export class OwnerController {
   @Get()
   @Roles(RoleCode.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get all owners successfully.')
   @ApiOperation({ summary: 'Get all owners' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -29,21 +28,20 @@ export class OwnerController {
     return this.getOwnersUseCase.execute(query);
   }
 
-  @Get(':id')
-  @Roles(RoleCode.ADMIN)
+  @Get(':userId')
+  @Roles(RoleCode.ADMIN, RoleCode.OWN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get owner by id successfully.')
-  @ApiOperation({ summary: 'Get owner by id' })
-  getOwnerById(@Param('id') id: string) {
-    return this.getOwnerByIdUseCase.execute(id);
+  @ApiOperation({ summary: 'Get owner by userId' })
+  getOwnerByUserId(@Param('userId') userId: string) {
+    return this.getOwnerByIdUseCase.execute(userId);
   }
 
-  @Patch(':id')
-  @Roles(RoleCode.ADMIN)
+  @Put(':userId')
+  @Roles(RoleCode.ADMIN, RoleCode.OWN)
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Update owner successfully.')
-  @ApiOperation({ summary: 'Update owner' })
-  updateOwner(@Param('id') ownerId: string, @Body() dto: OwnerDto) {
-    return this.updateOwnerUseCase.execute(ownerId, dto);
+  @ResponseMessage('Update successfully.')
+  @ApiOperation({ summary: 'Update owner by userId' })
+  updateOwner(@Param('userId') userId: string, @Body() dto: OwnerDto) {
+    return this.updateOwnerUseCase.execute(userId, dto);
   }
 }

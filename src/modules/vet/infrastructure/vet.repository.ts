@@ -1,21 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { GetVetsFilter, IVetRepository, PaginatedResult, UpdateVetData } from '../domain/i-vet.repository';
+import { IVetRepository, PaginatedResult, UpdateVetData } from '../domain/i-vet.repository';
 import { VetEntity } from '../domain/vet.entity';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { VetMapper } from './vet.mapper';
+import { Params } from '@/shared/domain/query-params.type';
 
 @Injectable()
 export class VetRepository implements IVetRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: GetVetsFilter): Promise<PaginatedResult<VetEntity>> {
-    const { search, page, limit } = filter;
+  async findAll(params: Params): Promise<PaginatedResult<VetEntity>> {
+    const { search, page, limit } = params;
     const skip = (page - 1) * limit;
 
-    const where = this.buildWhereClause({ search });
+    const where = {
+      user: {
+        isDeleted: false,
+      },
+      ...(search && {
+        OR: [
+          { user: { email: { contains: search, mode: 'insensitive' as const } } },
+          { user: { fullName: { contains: search, mode: 'insensitive' as const } } },
+          { user: { phoneNumber: { contains: search, mode: 'insensitive' as const } } },
+          { address: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
 
     const [raws, total] = await this.prisma.$transaction([
-      this.prisma.ownerProfile.findMany({
+      this.prisma.vetProfile.findMany({
         where,
         include: {
           user: {
@@ -26,20 +39,20 @@ export class VetRepository implements IVetRepository {
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.ownerProfile.count({ where }),
+      this.prisma.vetProfile.count({ where }),
     ]);
 
     return {
-      data: raws.map(raw => VetMapper.toDomain(raw as any)),
+      data: raws.map(raw => VetMapper.toDomain(raw)),
       total,
       page,
       limit,
     };
   }
 
-  async findById(id: string): Promise<VetEntity | null> {
-    const raw = await this.prisma.ownerProfile.findUnique({
-      where: { profileId: id },
+  async findById(profileId: string): Promise<VetEntity | null> {
+    const raw = await this.prisma.vetProfile.findUnique({
+      where: { id: profileId },
       include: {
         user: {
           include: { role: true },
@@ -51,11 +64,11 @@ export class VetRepository implements IVetRepository {
       return null;
     }
 
-    return VetMapper.toDomain(raw as any);
+    return VetMapper.toDomain(raw);
   }
 
   async findByUserId(userId: string): Promise<VetEntity | null> {
-    const raw = await this.prisma.ownerProfile.findUnique({
+    const raw = await this.prisma.vetProfile.findUnique({
       where: { userId },
       include: {
         user: {
@@ -68,12 +81,12 @@ export class VetRepository implements IVetRepository {
       return null;
     }
 
-    return VetMapper.toDomain(raw as any);
+    return VetMapper.toDomain(raw);
   }
 
   async update(data: UpdateVetData): Promise<VetEntity> {
-    const raw = await this.prisma.ownerProfile.update({
-      where: { profileId: data.id },
+    const raw = await this.prisma.vetProfile.update({
+      where: { userId: data.userId },
       data: {
         ...(data.bio !== undefined && { bio: data.bio }),
         ...(data.address !== undefined && { address: data.address }),
@@ -93,22 +106,6 @@ export class VetRepository implements IVetRepository {
       },
     });
 
-    return VetMapper.toDomain(raw as any);
-  }
-
-  private buildWhereClause(filter: Pick<GetVetsFilter, 'search'>) {
-    return {
-      user: {
-        isDeleted: false,
-      },
-      ...(filter.search && {
-        OR: [
-          { user: { email: { contains: filter.search, mode: 'insensitive' as const } } },
-          { user: { fullName: { contains: filter.search, mode: 'insensitive' as const } } },
-          { user: { phoneNumber: { contains: filter.search, mode: 'insensitive' as const } } },
-          { address: { contains: filter.search, mode: 'insensitive' as const } },
-        ],
-      }),
-    };
+    return VetMapper.toDomain(raw);
   }
 }

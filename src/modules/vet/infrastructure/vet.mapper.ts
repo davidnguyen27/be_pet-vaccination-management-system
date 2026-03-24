@@ -3,11 +3,11 @@ import { VetEntity } from '../domain/vet.entity';
 import { VetResponseDto } from '../application/dtos/vet-res.dto';
 import { UserResponseDto } from '@/modules/user/application/dtos/user-res.dto';
 
-interface VetRaw {
-  profileId: string;
+export interface VetRaw {
+  id: string;
   userId: string;
   user: {
-    userId: string;
+    id: string;
     email: string;
     fullName?: string | null;
     phoneNumber?: string | null;
@@ -28,7 +28,7 @@ interface VetRaw {
   endDate: Date | null;
   address: string;
   citizenId: string;
-  employmentStatus: employment_status;
+  employmentStatus: employment_status | 'WORKING' | 'ON_LEAVE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,9 +36,9 @@ interface VetRaw {
 export class VetMapper {
   static toDomain(raw: VetRaw): VetEntity {
     return new VetEntity({
-      id: raw.profileId,
+      id: raw.id,
       user: {
-        id: raw.user.userId,
+        id: raw.user.id,
         email: raw.user.email,
         fullName: raw.user.fullName,
         phoneNumber: raw.user.phoneNumber,
@@ -57,7 +57,7 @@ export class VetMapper {
       endDate: raw.endDate,
       address: raw.address,
       citizenId: raw.citizenId,
-      employmentStatus: raw.employmentStatus,
+      employmentStatus: raw.employmentStatus as employment_status,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     });

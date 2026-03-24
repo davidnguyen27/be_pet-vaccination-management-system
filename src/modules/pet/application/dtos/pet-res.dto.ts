@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OwnerResponseDto } from '@/modules/owner/application/dtos/owner-res.dto';
+import { SpeciesResponseDto } from '@/modules/species/application/dtos/species-res.dto';
 
 export class PetResponseDto {
   @ApiProperty()
@@ -8,14 +9,17 @@ export class PetResponseDto {
   @ApiProperty()
   ownerId!: string;
 
-  @ApiProperty({ type: () => OwnerResponseDto, nullable: true })
-  owner!: OwnerResponseDto | null;
+  @ApiProperty({ type: () => OwnerResponseDto })
+  owner!: OwnerResponseDto;
 
   @ApiProperty()
   name!: string;
 
   @ApiProperty()
   speciesId!: string;
+
+  @ApiProperty({ type: () => SpeciesResponseDto })
+  species!: SpeciesResponseDto;
 
   @ApiProperty()
   sex!: string;

@@ -1,19 +1,16 @@
+import { PetGender } from '@/enums/pet';
 import { PetEntity } from './pet.entity';
-import { gender } from '../../../../generated/prisma/enums';
+import type { PaginatedResult } from '@/shared/domain/paginated-result.type';
+import { Params } from '@/shared/domain/query-params.type';
+import { Species } from '@/enums/species';
 
 export const I_PET_REPOSITORY = Symbol('IPetRepository');
-
-export interface GetPetsFilter {
-  page: number;
-  limit: number;
-  search?: string;
-}
 
 export interface CreatePetData {
   ownerId: string;
   speciesId: string;
   name: string;
-  sex: gender;
+  sex: PetGender;
   dob: Date;
   weight: number;
   color: string;
@@ -27,7 +24,7 @@ export interface UpdatePetData {
   ownerId?: string;
   speciesId?: string;
   name?: string;
-  sex?: gender;
+  sex?: PetGender;
   dob?: Date;
   weight?: number;
   color?: string;
@@ -36,15 +33,12 @@ export interface UpdatePetData {
   isSterilized?: boolean;
 }
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
+export interface PetParams extends Params {
+  species?: Species;
 }
 
 export interface IPetRepository {
-  findAll(filter: GetPetsFilter): Promise<PaginatedResult<PetEntity>>;
+  findAll(params: PetParams): Promise<PaginatedResult<PetEntity>>;
   findById(id: string): Promise<PetEntity | null>;
   create(data: CreatePetData): Promise<PetEntity>;
   update(data: UpdatePetData): Promise<PetEntity>;

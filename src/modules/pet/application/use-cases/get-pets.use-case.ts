@@ -17,6 +17,7 @@ export class GetAllPetsUseCase {
       page,
       limit,
       search: query.search,
+      species: query.species,
     });
 
     const pets = result.data.map(pet => PetMapper.toResponse(pet));

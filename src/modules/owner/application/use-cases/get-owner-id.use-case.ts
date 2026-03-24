@@ -7,8 +7,8 @@ import { OwnerMapper } from '../../infrastructure/owner.mapper';
 export class GetOwnerByIdUseCase {
   constructor(@Inject(I_OWNER_REPOSITORY) private readonly ownerRepo: IOwnerRepository) {}
 
-  async execute(ownerId: string): Promise<OwnerResponseDto> {
-    const owner = await this.ownerRepo.findById(ownerId);
+  async execute(userId: string): Promise<OwnerResponseDto> {
+    const owner = await this.ownerRepo.findByUserId(userId);
 
     if (!owner) {
       throw new NotFoundException('Owner not found');

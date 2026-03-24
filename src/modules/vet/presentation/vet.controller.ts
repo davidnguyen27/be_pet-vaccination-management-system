@@ -1,13 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { GetVetsUseCase } from '../application/use-cases/get-vets.use-case';
 import { ResponseMessage } from '@/shared/decorators';
 import { VetQueryDto } from '../application/dtos/vet-query.dto';
 import { GetVetIdUseCase } from '../application/use-cases/get-vet-id.use-case';
-import { UpdateVetUseCase } from '../application/use-cases/update-staff.use-case';
+import { UpdateVetUseCase } from '../application/use-cases/update-vet.use-case';
 import { VetDto } from '../application/dtos/vet-req.dto';
 
-@Controller('staffs')
+@Controller('vet')
 @ApiBearerAuth('access-token')
 export class VetController {
   constructor(
@@ -18,7 +18,6 @@ export class VetController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get all vets successfully.')
   @ApiOperation({ summary: 'Get all vets' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -27,19 +26,18 @@ export class VetController {
     return this.getVetsUseCase.execute(query);
   }
 
-  @Get(':id')
+  @Get(':userId')
+  @ApiOperation({ summary: 'Get vet by userId' })
   @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Get vet by id successfully.')
-  @ApiOperation({ summary: 'Get vet by id' })
-  getVetById(@Query('id') id: string) {
-    return this.getVetByIdUseCase.execute(id);
+  getVetById(@Param('userId') userId: string) {
+    return this.getVetByIdUseCase.execute(userId);
   }
 
-  @Patch(':id')
+  @Patch(':userId')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Update vet successfully.')
   @ApiOperation({ summary: 'Update vet' })
-  updateVet(@Query('id') id: string, @Body() dto: VetDto) {
-    return this.updateVetUseCase.execute(id, dto);
+  updateVet(@Param('userId') userId: string, @Body() dto: VetDto) {
+    return this.updateVetUseCase.execute(userId, dto);
   }
 }

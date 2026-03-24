@@ -1,7 +1,7 @@
 import { UserEntity } from '@/modules/user/domain/user.entity';
 import { BaseEntity } from '@/shared/domain/base.entity';
 
-interface OwnerProps {
+export interface OwnerProps {
   id: string;
   user?: UserEntity;
   address: string | null;

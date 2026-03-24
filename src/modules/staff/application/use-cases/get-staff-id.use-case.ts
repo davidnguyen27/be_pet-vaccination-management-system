@@ -7,8 +7,8 @@ import { StaffMapper } from '../../infrastructure/staff.mapper';
 export class GetStaffIdUseCase {
   constructor(@Inject(I_STAFF_REPOSITORY) private readonly staffRepo: IStaffRepository) {}
 
-  async execute(id: string): Promise<StaffResponseDto> {
-    const staff = await this.staffRepo.findById(id);
+  async execute(userId: string): Promise<StaffResponseDto> {
+    const staff = await this.staffRepo.findByUserId(userId);
     if (!staff) throw new NotFoundException('Staff not found');
     return StaffMapper.toResponse(staff);
   }

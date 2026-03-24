@@ -1,14 +1,9 @@
-import { PaginatedResult } from '@/modules/user/domain/i-user.repository';
+import { Params } from '@/shared/domain/query-params.type';
 import { SpeciesEntity } from './species.entity';
-
-export interface GetSpeciesFilter {
-  page: number;
-  limit: number;
-  search?: string;
-}
+import type { PaginatedResult } from '@/shared/domain/paginated-result.type';
 
 export interface I_SpeciesRepository {
-  findAll(filter: GetSpeciesFilter): Promise<PaginatedResult<SpeciesEntity>>;
+  findAll(params: Params): Promise<PaginatedResult<SpeciesEntity>>;
   findById(id: string): Promise<SpeciesEntity | null>;
 }
 

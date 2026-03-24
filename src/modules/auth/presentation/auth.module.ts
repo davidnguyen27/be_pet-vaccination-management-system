@@ -4,14 +4,16 @@ import { PassportModule } from '@nestjs/passport';
 import { I_AUTH_REPOSITORY } from '../domain/i-auth.repository';
 import { I_EMAIL_SERVICE } from '../application/ports/i-email.service';
 import {
-  VerifyOtpUseCase,
   RegisterUseCase,
   LoginUseCase,
   RefreshTokenUseCase,
   ForgotPasswordUseCase,
   ResetPasswordUseCase,
+  ValidateTokenUseCase,
   LogoutUseCase,
-  ResendTokenUseCase,
+  ResendEmailUseCase,
+  GetMeUseCase,
+  VerifyEmailUseCase,
 } from '../application/use-cases';
 
 import { AuthRepository } from '../infrastructure/repositories/auth.repository';
@@ -22,13 +24,15 @@ import { UserModule } from '@/modules/user/presentation/user.module';
 
 const USE_CASES = [
   RegisterUseCase,
-  VerifyOtpUseCase,
   LoginUseCase,
   RefreshTokenUseCase,
   ForgotPasswordUseCase,
   ResetPasswordUseCase,
+  ValidateTokenUseCase,
   LogoutUseCase,
-  ResendTokenUseCase,
+  VerifyEmailUseCase,
+  ResendEmailUseCase,
+  GetMeUseCase,
 ];
 
 @Module({

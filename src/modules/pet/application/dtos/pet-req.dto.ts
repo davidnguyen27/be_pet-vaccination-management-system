@@ -1,8 +1,8 @@
+import { PetGender } from '@/enums/pet';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
-import { gender } from '../../../../../generated/prisma/enums';
 
-export class PetRequestDto {
+export class PetDto {
   @ApiProperty({ example: '3fa85f64-5717-4562-b3fc-2c963f66afa6' })
   @IsUUID()
   ownerId!: string;
@@ -16,10 +16,10 @@ export class PetRequestDto {
   @IsNotEmpty({ message: 'Name is required!' })
   name!: string;
 
-  @ApiProperty({ enum: gender, example: gender.MALE })
-  @IsEnum(gender)
+  @ApiProperty({ enum: PetGender, example: PetGender.MALE })
+  @IsEnum(PetGender)
   @IsNotEmpty({ message: 'Sex is required!' })
-  sex!: gender;
+  sex!: PetGender;
 
   @ApiProperty({ example: '2015-06-01' })
   @IsDate()

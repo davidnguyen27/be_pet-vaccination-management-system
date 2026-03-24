@@ -1,14 +1,15 @@
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { GetStaffFilter, IStaffRepository, PaginatedResult, UpdateStaffData } from '../domain/i-staff.repository';
+import { IStaffRepository, PaginatedResult, UpdateStaffData } from '../domain/i-staff.repository';
 import { StaffEntity } from '../domain/staff.entity';
 import { StaffMapper } from './staff.mapper';
+import { Params } from '@/shared/domain/query-params.type';
 
 @Injectable()
 export class StaffRepository implements IStaffRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: GetStaffFilter): Promise<PaginatedResult<StaffEntity>> {
+  async findAll(filter: Params): Promise<PaginatedResult<StaffEntity>> {
     const { search, page, limit } = filter;
     const skip = (page - 1) * limit;
 
@@ -30,16 +31,16 @@ export class StaffRepository implements IStaffRepository {
     ]);
 
     return {
-      data: raws.map(raw => StaffMapper.toDomain(raw as any)),
+      data: raws.map(raw => StaffMapper.toDomain(raw)),
       total,
       page,
       limit,
     };
   }
 
-  async findById(id: string): Promise<StaffEntity | null> {
+  async findById(profileId: string): Promise<StaffEntity | null> {
     const raw = await this.prisma.staffProfile.findUnique({
-      where: { profileId: id },
+      where: { id: profileId },
       include: {
         user: {
           include: { role: true },
@@ -51,21 +52,38 @@ export class StaffRepository implements IStaffRepository {
       return null;
     }
 
-    return StaffMapper.toDomain(raw as any);
+    return StaffMapper.toDomain(raw);
+  }
+
+  async findByUserId(userId: string): Promise<StaffEntity | null> {
+    const raw = await this.prisma.staffProfile.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          include: { role: true },
+        },
+      },
+    });
+
+    if (!raw || raw.user.isDeleted) {
+      return null;
+    }
+
+    return StaffMapper.toDomain(raw);
   }
 
   async update(data: UpdateStaffData): Promise<StaffEntity> {
     const raw = await this.prisma.staffProfile.update({
-      where: { code: data.code },
+      where: { userId: data.userId },
       data: {
         ...(data.jobTitle !== undefined && { jobTitle: data.jobTitle }),
         ...(data.department !== undefined && { department: data.department }),
-        employmentType: data.employmentType,
-        employmentStatus: data.employmentStatus,
-        joinDate: new Date(data.joinDate),
-        ...(data.endDate !== undefined && { endDate: data.endDate ? new Date(data.endDate) : null }),
-        address: data.address,
-        citizenId: data.citizenId,
+        ...(data.employmentType !== undefined && { employmentType: data.employmentType }),
+        ...(data.employmentStatus !== undefined && { employmentStatus: data.employmentStatus }),
+        ...(data.joinDate !== undefined && { joinDate: data.joinDate }),
+        ...(data.endDate !== undefined && { endDate: data.endDate }),
+        ...(data.address !== undefined && { address: data.address }),
+        ...(data.citizenId !== undefined && { citizenId: data.citizenId }),
         ...(data.notes !== undefined && { notes: data.notes }),
       },
       include: {
@@ -75,10 +93,10 @@ export class StaffRepository implements IStaffRepository {
       },
     });
 
-    return StaffMapper.toDomain(raw as any);
+    return StaffMapper.toDomain(raw);
   }
 
-  private buildWhereClause(filter: Pick<GetStaffFilter, 'search'>) {
+  private buildWhereClause(filter: Pick<Params, 'search'>) {
     return {
       user: {
         isDeleted: false,

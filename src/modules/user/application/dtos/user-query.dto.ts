@@ -1,8 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { RoleCode } from '@/enums';
 import { BaseQueryDto } from '@/shared/application/base-query.dto';
+import { ActiveStatus } from '@/enums/user';
 
 export class UserQueryDto extends BaseQueryDto {
   @ApiPropertyOptional({ enum: RoleCode })
@@ -12,11 +12,6 @@ export class UserQueryDto extends BaseQueryDto {
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  isActive?: boolean;
+  @IsEnum(ActiveStatus)
+  isActive?: ActiveStatus;
 }

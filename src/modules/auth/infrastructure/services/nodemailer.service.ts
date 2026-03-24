@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { IEmailService, SendOtpOptions } from '../../application/ports/i-email.service';
+import { IEmailService, SendResetPasswordLink, SendVerificationLink } from '../../application/ports/i-email.service';
 
 @Injectable()
 export class NodemailerService implements IEmailService {
@@ -22,15 +22,10 @@ export class NodemailerService implements IEmailService {
     this.from = this.configService.get<string>('email.from') ?? 'PVMS <noreply@pvms.vn>';
   }
 
-  async sendOtp(options: SendOtpOptions): Promise<void> {
-    const subject = options.type === 'REGISTER' ? 'Verify your PVMS account' : 'Reset your PVMS password';
-
+  async sendVerificationLink(options: SendVerificationLink): Promise<void> {
     const greeting = options.fullName ? `Hi ${options.fullName},` : 'Hi,';
-
-    const body =
-      options.type === 'REGISTER'
-        ? `${greeting}\n\nYour verification OTP is: <strong>${options.otp}</strong>\n\nThis code expires in 10 minutes.`
-        : `${greeting}\n\nYour password reset OTP is: <strong>${options.otp}</strong>\n\nThis code expires in 10 minutes. If you did not request this, ignore this email.`;
+    const subject = 'Verify your PVMS account';
+    const body = `${greeting}\n\nPlease click the link below to verify your account:\n${options.verifyUrl}\n\nThis link expires in 10 minutes.`;
 
     try {
       await this.transporter.sendMail({
@@ -39,9 +34,28 @@ export class NodemailerService implements IEmailService {
         subject,
         html: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
       });
-      this.logger.log(`OTP email [${options.type}] sent to ${options.to}`);
+      this.logger.log(`Verification link email sent to ${options.to}`);
     } catch (err) {
-      this.logger.error(`Failed to send OTP email to ${options.to}`, err);
+      this.logger.error(`Failed to send verification link email to ${options.to}`, err);
+      throw err;
+    }
+  }
+
+  async sendResetPasswordLink(options: SendResetPasswordLink): Promise<void> {
+    const greeting = options.fullName ? `Hi ${options.fullName},` : 'Hi,';
+    const subject = 'Reset your PVMS password';
+    const body = `${greeting}\n\nPlease click the link below to reset your password:\n${options.resetUrl}\n\nThis link expires in 10 minutes.\n\nIf you did not request this, you can ignore this email.`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: options.to,
+        subject,
+        html: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+      });
+      this.logger.log(`Reset password link email sent to ${options.to}`);
+    } catch (err) {
+      this.logger.error(`Failed to send reset password link email to ${options.to}`, err);
       throw err;
     }
   }

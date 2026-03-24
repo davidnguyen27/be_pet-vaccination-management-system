@@ -1,16 +1,27 @@
 import { AuthTokensResponseDto } from '@/modules/auth/application/dtos/auth-res.dto';
 import { CookieOptions, Response } from 'express';
 
-export const setTokenCookies = (res: Response, tokens: AuthTokensResponseDto): void => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const base: CookieOptions = { httpOnly: true, secure: isProduction, sameSite: 'strict' };
+type SetTokenCookiesOption = {
+  domain?: string;
+};
 
-  res.cookie('access_token', tokens.accessToken, {
-    ...base,
-    maxAge: tokens.accessExpiresAt.getTime() - Date.now(),
-  });
+export const setTokenCookies = (res: Response, tokens: AuthTokensResponseDto, option?: SetTokenCookiesOption) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const base: CookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    ...(option?.domain ? { domain: option.domain } : {}),
+  };
+  const refreshMaxAge = Math.max(0, tokens.refreshExpiresAt.getTime() - Date.now());
+
   res.cookie('refresh_token', tokens.refreshToken, {
     ...base,
-    maxAge: tokens.refreshExpiresAt.getTime() - Date.now(),
+    maxAge: refreshMaxAge,
   });
+
+  return {
+    accessToken: tokens.accessToken,
+  };
 };

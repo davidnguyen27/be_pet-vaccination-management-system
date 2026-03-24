@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { GetSpeciesFilter, I_SpeciesRepository } from '../domain/i-species.repository';
+import { I_SpeciesRepository } from '../domain/i-species.repository';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
-import { PaginatedResult } from '@/modules/user/domain/i-user.repository';
 import { SpeciesEntity } from '../domain/species.entity';
 import { SpeciesMapper } from './species.mapper';
+import type { PaginatedResult } from '@/shared/domain/paginated-result.type';
+import { Params } from '@/shared/domain/query-params.type';
 
 @Injectable()
 export class SpeciesRepository implements I_SpeciesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: GetSpeciesFilter): Promise<PaginatedResult<SpeciesEntity>> {
+  async findAll(filter: Params): Promise<PaginatedResult<SpeciesEntity>> {
     const { page, limit, search } = filter;
 
     const where = {
@@ -43,9 +44,9 @@ export class SpeciesRepository implements I_SpeciesRepository {
     };
   }
 
-  async findById(id: string): Promise<SpeciesEntity | null> {
+  async findById(speciesId: string): Promise<SpeciesEntity | null> {
     const species = await this.prisma.species.findUnique({
-      where: { speciesId: id, isDeleted: false },
+      where: { id: speciesId, isDeleted: false },
     });
     return species ? SpeciesMapper.toDomain(species) : null;
   }
