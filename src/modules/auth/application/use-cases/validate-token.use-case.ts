@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
-import { extractTokenInput } from '@/shared/helpers/extract-token-input.helper';
+import { extractTokenInput } from '@/modules/auth/helpers/extract-token-input.helper';
 
 @Injectable()
 export class ValidateTokenUseCase {
-  constructor(@Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository) {}
+  constructor(@Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort) {}
 
   async execute(token: string): Promise<{ isValid: true }> {
     const tokenRecord = await extractTokenInput(this.authRepo, token);

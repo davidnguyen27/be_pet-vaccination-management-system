@@ -1,26 +1,25 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PetResponseDto } from '../dtos/pet-res.dto';
-import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
-import { PetMapper } from '../../infrastructure/pet.mapper';
-import { PetDto } from '../dtos/pet-req.dto';
+import { Injectable } from '@nestjs/common';
+import { PetRepositoryPort } from '../ports/pet.repository.port';
+import { PetDTO } from '../../presentation/http/dto/pet-request.dto';
+import { PetModel } from '../model/pet.model';
+import { PetQueryPort } from '../ports/pet.query.port';
 
 @Injectable()
 export class UpdatePetUseCase {
-  constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
+  constructor(
+    private readonly petRepo: PetRepositoryPort,
+    private readonly petQuery: PetQueryPort,
+  ) {}
 
-  async execute(petId: string, dto: PetDto): Promise<PetResponseDto> {
-    const existing = await this.petRepo.findById(petId);
-    if (!existing) {
-      throw new NotFoundException('Pet not found');
-    }
+  async execute(petId: string, dto: PetDTO): Promise<PetModel> {
+    const pet = await this.petRepo.findByIdOrThrow(petId);
 
-    const updated = await this.petRepo.update({
-      id: petId,
+    pet.update({
       ownerId: dto.ownerId,
       speciesId: dto.speciesId,
       name: dto.name,
       sex: dto.sex,
-      dob: dto.dob,
+      dob: new Date(dto.dob),
       weight: dto.weight,
       color: dto.color,
       breed: dto.breed,
@@ -28,6 +27,8 @@ export class UpdatePetUseCase {
       isSterilized: dto.isSterilized,
     });
 
-    return PetMapper.toResponse(updated);
+    await this.petRepo.save(pet);
+
+    return this.petQuery.findById(pet.id);
   }
 }

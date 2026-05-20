@@ -1,32 +1,51 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { UserDto } from '../dtos/user-req.dto';
-import { I_USER_REPOSITORY, type IUserRepository } from '../../domain/i-user.repository';
-import { UserMapper } from '../../infrastructure/user.mapper';
+import { Injectable } from '@nestjs/common';
+import { UserRepositoryPort } from '../ports/user.repository.port';
+import { UserEntity } from '../../domain/user.entity';
+import { UserDeletedError } from '../../domain/exceptions/user.error';
+import { CloudinaryService } from '@/shared/infrastructure/cloudinary/cloudinary.service';
 
-const BCRYPT_SALT_ROUNDS = 10;
+interface UpdateUserCommand {
+  id: string;
+  fullName?: string | null;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
+  dob?: Date | null;
+  avatar?: Express.Multer.File;
+}
 
 @Injectable()
 export class UpdateUserUseCase {
-  constructor(@Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository) {}
+  constructor(
+    private readonly userRepo: UserRepositoryPort,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
-  async execute(userId: string, dto: UserDto) {
-    const existing = await this.userRepo.findById(userId);
-    if (!existing) throw new NotFoundException('User not found');
+  async execute(command: UpdateUserCommand): Promise<UserEntity> {
+    const user = await this.userRepo.findByIdOrThrow(command.id);
+    if (user.isDeleted) throw new UserDeletedError(command.id);
 
-    const passwordHash = dto.password ? await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS) : undefined;
+    const uploadedAvatar = command.avatar
+      ? await this.cloudinaryService.upload(command.avatar, {
+          folder: 'pet-vaccination/users/avatars',
+        })
+      : null;
 
-    const updated = await this.userRepo.update({
-      id: userId,
-      email: dto.email,
-      passwordHash,
-      fullName: dto.fullName,
-      phoneNumber: dto.phoneNumber,
-      avatarUrl: dto.avatarUrl,
-      dob: dto.dob,
-      roleCode: dto.roleCode,
-    });
+    try {
+      user.updateProfile({
+        fullName: command.fullName,
+        phoneNumber: command.phoneNumber,
+        avatarUrl: uploadedAvatar?.secure_url ?? command.avatarUrl,
+        dob: command.dob,
+      });
 
-    return UserMapper.toResponse(updated);
+      await this.userRepo.save(user);
+      return user;
+    } catch (error) {
+      if (uploadedAvatar?.public_id) {
+        await this.cloudinaryService.delete(uploadedAvatar.public_id);
+      }
+
+      throw error;
+    }
   }
 }

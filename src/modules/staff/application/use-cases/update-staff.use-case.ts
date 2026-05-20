@@ -1,31 +1,44 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { I_STAFF_REPOSITORY, IStaffRepository } from '../../domain/i-staff.repository';
-import { StaffDto } from '../dtos/staff-req.dto';
-import { StaffResponseDto } from '../dtos/staff-res.dto';
-import { StaffMapper } from '../../infrastructure/staff.mapper';
+import { Injectable } from '@nestjs/common';
+import { EmploymentStatus, employment_type } from '@/enums';
+import { StaffRepositoryPort } from '../ports/staff.repository.port';
+import { StaffEntity } from '../../domain/staff.entity';
+
+interface UpdateStaffCommand {
+  id: string;
+  code?: string;
+  jobTitle?: string | null;
+  department?: string | null;
+  employmentType?: employment_type;
+  employmentStatus?: EmploymentStatus;
+  joinDate?: string;
+  endDate?: string | null;
+  address?: string;
+  citizenId?: string;
+  notes?: string | null;
+}
 
 @Injectable()
 export class UpdateStaffUseCase {
-  constructor(@Inject(I_STAFF_REPOSITORY) private readonly staffRepo: IStaffRepository) {}
+  constructor(private readonly staffRepo: StaffRepositoryPort) {}
 
-  async execute(userId: string, dto: StaffDto): Promise<StaffResponseDto> {
-    const staff = await this.staffRepo.findByUserId(userId);
-    if (!staff) throw new NotFoundException('Staff not found');
+  async execute(command: UpdateStaffCommand): Promise<StaffEntity> {
+    const staff = await this.staffRepo.findByUserIdOrThrow(command.id);
 
-    const updated = await this.staffRepo.update({
-      userId,
-      ...(dto.code !== undefined && { code: dto.code }),
-      ...(dto.jobTitle !== undefined && { jobTitle: dto.jobTitle }),
-      ...(dto.department !== undefined && { department: dto.department }),
-      ...(dto.employmentType !== undefined && { employmentType: dto.employmentType }),
-      ...(dto.employmentStatus !== undefined && { employmentStatus: dto.employmentStatus }),
-      ...(dto.joinDate !== undefined && { joinDate: dto.joinDate }),
-      ...(dto.endDate !== undefined && { endDate: dto.endDate }),
-      ...(dto.address !== undefined && { address: dto.address }),
-      ...(dto.citizenId !== undefined && { citizenId: dto.citizenId }),
-      ...(dto.notes !== undefined && { notes: dto.notes }),
+    staff.update({
+      code: command.code,
+      jobTitle: command.jobTitle,
+      department: command.department,
+      employmentType: command.employmentType,
+      employmentStatus: command.employmentStatus,
+      joinDate: command.joinDate !== undefined ? new Date(command.joinDate) : undefined,
+      endDate: command.endDate !== undefined ? (command.endDate ? new Date(command.endDate) : null) : undefined,
+      address: command.address,
+      citizenId: command.citizenId,
+      notes: command.notes,
     });
 
-    return StaffMapper.toResponse(updated);
+    await this.staffRepo.save(staff);
+
+    return staff;
   }
 }

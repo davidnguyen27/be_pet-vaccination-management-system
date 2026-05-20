@@ -3,26 +3,25 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { AuthTokensResponseDto } from '../dtos/auth-res.dto';
-import type { JwtPayload } from '@/shared/decorators/current-user.decorator';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
-import { AUTH_CONSTANTS } from '@/constants';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
+import { AuthTokensResponseDTO } from '../../presentation/http/dto/auth.dto';
+import { AuthJwtPayload } from '../../domain/jwt-payload';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
+import { AUTH_CONSTANTS } from '@/constants/auth';
 
 @Injectable()
 export class RefreshTokenUseCase {
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
-  async execute(refreshToken: string): Promise<AuthTokensResponseDto> {
-    let payload: JwtPayload;
+  async execute(refreshToken: string): Promise<AuthTokensResponseDTO> {
+    let payload: AuthJwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+      payload = this.jwtService.verify<AuthJwtPayload>(refreshToken, {
         secret: this.configService.get<string>('jwt.refreshSecret'),
       });
     } catch {
@@ -49,7 +48,7 @@ export class RefreshTokenUseCase {
 
     const newTokenId = randomUUID();
 
-    const newPayload: JwtPayload = {
+    const newPayload: AuthJwtPayload = {
       sub: user.id,
       email: user.email,
       roleCode: user.roleCode,
@@ -81,6 +80,6 @@ export class RefreshTokenUseCase {
       expiresAt,
     });
 
-    return new AuthTokensResponseDto(newAccessToken, newRawRefreshToken, accessExpiresAt, expiresAt);
+    return new AuthTokensResponseDTO(newAccessToken, newRawRefreshToken, accessExpiresAt, expiresAt);
   }
 }

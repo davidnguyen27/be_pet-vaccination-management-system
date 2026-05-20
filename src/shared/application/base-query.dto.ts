@@ -1,24 +1,20 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
-export class BaseQueryDto {
-  @ApiPropertyOptional({ example: 1, minimum: 1 })
+export class BaseQueryDTO {
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Transform(({ value }) => Number(value))
-  page?: number;
+  page: number = 1;
 
-  @ApiPropertyOptional({ example: 10, minimum: 1, maximum: 100 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  @Transform(({ value }) => Number(value))
-  limit?: number;
+  limit: number = 10;
 
-  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   search?: string;

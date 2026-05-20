@@ -1,10 +1,10 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
-import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
+import { EMAIL_SERVICE_PORT, EmailServicePort } from '../ports/email.service.port';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
-import { API_PREFIX } from '@/constants';
+import { API_PREFIX } from '@/constants/api-prefix';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -12,9 +12,9 @@ export class ResendEmailUseCase {
   private readonly logger = new Logger(ResendEmailUseCase.name);
 
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
+    @Inject(EMAIL_SERVICE_PORT) private readonly emailService: EmailServicePort,
     private readonly configService: ConfigService,
   ) {}
 
@@ -42,7 +42,7 @@ export class ResendEmailUseCase {
     const prefixPath = API_PREFIX.replace(/^\/+/, '');
     const verifyUrl = `${backendBaseUrl}/${prefixPath}/auth/verify-email?token=${rawToken}`;
 
-    await this.emailService.sendVerificationLink({
+    await this.emailService.sendVerificationEmail({
       to: email,
       verifyUrl,
       fullName: user.fullName ?? undefined,

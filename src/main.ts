@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from '@/shared/filters/http-exception.filter';
+import { HttpExceptionFilter } from '@/shared/presentation/filters/http-exception.filter';
 import { setupSwagger } from '@/configs/swagger.config';
-import { API_PREFIX } from '@/constants';
+import { API_PREFIX } from '@/constants/api-prefix';
+import { TransformInterceptor } from './shared/presentation/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,23 +33,14 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
-      exceptionFactory: errors => {
-        const formattedErrors: Record<string, string> = {};
-
-        errors.forEach(err => {
-          const messages = Object.values(err.constraints ?? {}).join(', ');
-          formattedErrors[err.property] = messages;
-        });
-
-        return new BadRequestException({
-          errors: formattedErrors,
-        });
-      },
     }),
   );
 
   // Global filters
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Global interceptors
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger
   setupSwagger(app);

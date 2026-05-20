@@ -1,26 +1,28 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { I_OWNER_REPOSITORY, IOwnerRepository } from '../../domain/i-owner.repository';
-import { OwnerDto } from '../dtos/owner-req.dto';
-import { OwnerResponseDto } from '../dtos/owner-res.dto';
-import { OwnerMapper } from '../../infrastructure/owner.mapper';
+import { Injectable } from '@nestjs/common';
+import { OwnerRepositoryPort } from '../ports/owner.repository.port';
+import { OwnerEntity } from '../../domain/owner.entity';
+
+interface UpdateOwnerCommand {
+  id: string;
+  address?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+}
 
 @Injectable()
 export class UpdateOwnerUseCase {
-  constructor(@Inject(I_OWNER_REPOSITORY) private readonly ownerRepo: IOwnerRepository) {}
+  constructor(private readonly ownerRepo: OwnerRepositoryPort) {}
 
-  async execute(userId: string, dto: OwnerDto): Promise<OwnerResponseDto> {
-    const existing = await this.ownerRepo.findByUserId(userId);
-    if (!existing) {
-      throw new NotFoundException('Owner not found');
-    }
-
-    const updated = await this.ownerRepo.update({
-      userId,
-      address: dto.address,
-      locationLat: dto.locationLat,
-      locationLng: dto.locationLng,
+  async execute(command: UpdateOwnerCommand): Promise<OwnerEntity> {
+    const owner = await this.ownerRepo.findByUserIdOrThrow(command.id);
+    owner.updateProfile({
+      address: command.address,
+      locationLat: command.locationLat,
+      locationLng: command.locationLng,
     });
 
-    return OwnerMapper.toResponse(updated);
+    await this.ownerRepo.save(owner);
+
+    return owner;
   }
 }

@@ -1,31 +1,34 @@
-import { PaginationDto } from '@/shared/application/pagination.dto';
-import { Inject, Injectable } from '@nestjs/common';
-import { PetQueryDto } from '../dtos/pet-query.dto';
-import { PetResponseDto } from '../dtos/pet-res.dto';
-import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
-import { PetMapper } from '../../infrastructure/pet.mapper';
+import { Injectable } from '@nestjs/common';
+import { Meta } from '@/shared/application/response.dto';
+import { PetModel } from '../model/pet.model';
+import { PetQueryPort } from '../ports/pet.query.port';
+import { FindPetOptions } from '../ports/pet.repository.port';
+
+interface GetPetsResult {
+  items: PetModel[];
+  meta: Meta;
+}
 
 @Injectable()
-export class GetAllPetsUseCase {
-  constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
+export class GetPetsUseCase {
+  constructor(private readonly petQuery: PetQueryPort) {}
 
-  async execute(query: PetQueryDto): Promise<PaginationDto<PetResponseDto>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+  async getById(id: string): Promise<PetModel> {
+    return this.petQuery.findById(id);
+  }
 
-    const result = await this.petRepo.findAll({
-      page,
-      limit,
-      search: query.search,
-      species: query.species,
-    });
+  async getMany(options: FindPetOptions): Promise<GetPetsResult> {
+    const { items, totalItems } = await this.petQuery.findMany(options);
+    const totalPages = options.limit > 0 ? Math.ceil(totalItems / options.limit) : 0;
 
-    const pets = result.data.map(pet => PetMapper.toResponse(pet));
-
-    return new PaginationDto(pets, {
-      total: result.total,
-      page,
-      limit,
-    });
+    return {
+      items,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total: totalItems,
+        totalPages,
+      },
+    };
   }
 }

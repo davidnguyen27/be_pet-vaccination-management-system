@@ -1,30 +1,32 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { I_SPECIES_REPOSITORY, I_SpeciesRepository } from '../../domain/i-species.repository';
-import { BaseQueryDto } from '@/shared/application/base-query.dto';
-import { SpeciesResponseDto } from '../dtos/species-res.dto';
-import { SpeciesMapper } from '../../infrastructure/species.mapper';
-import { PaginationDto } from '@/shared/application/pagination.dto';
+import { Injectable } from '@nestjs/common';
+import { Meta } from '@/shared/application/response.dto';
+import { SpeciesEntity } from '../../domain/species.entity';
+import { FindSpeciesOptions, SpeciesRepositoryPort } from '../ports/species.repository.port';
+
+interface GetSpeciesResult {
+  items: SpeciesEntity[];
+  meta: Meta;
+}
 
 @Injectable()
 export class GetSpeciesUseCase {
-  constructor(@Inject(I_SPECIES_REPOSITORY) private readonly speciesRepo: I_SpeciesRepository) {}
+  constructor(private readonly speciesRepo: SpeciesRepositoryPort) {}
 
-  async execute(query: BaseQueryDto): Promise<PaginationDto<SpeciesResponseDto>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+  async getById(id: string) {
+    const species = await this.speciesRepo.findByIdOrThrow(id);
+    return species;
+  }
 
-    const result = await this.speciesRepo.findAll({
-      page,
-      limit,
-      search: query.search,
-    });
-
-    const species = result.data.map(specie => SpeciesMapper.toResponse(specie));
-
-    return new PaginationDto(species, {
-      total: result.total,
-      page,
-      limit,
-    });
+  async getMany(options: FindSpeciesOptions): Promise<GetSpeciesResult> {
+    const { items, total } = await this.speciesRepo.findMany(options);
+    return {
+      items,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total,
+        totalPages: Math.ceil(total / options.limit),
+      },
+    };
   }
 }

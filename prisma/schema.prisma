@@ -435,6 +435,7 @@ model Vaccine {
   code               String         @unique @db.VarChar(50)
   name               String         @unique @db.VarChar(255)
   brand              String         @db.VarChar(255)
+  imgUrl             String?        @map("img_url") @db.VarChar(255)
   description        String?        @db.VarChar(255)
   doseValue          Float          @map("dose_value")
   doseUnit           String         @map("dose_unit") @db.VarChar(20)

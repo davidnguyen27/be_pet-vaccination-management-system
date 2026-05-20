@@ -7,16 +7,18 @@ import dbConfig from '@/configs/db.config';
 import jwtConfig from '@/configs/jwt.config';
 import emailConfig from '@/configs/email.config';
 import { PrismaModule } from '@/shared/infrastructure/prisma/prisma.module';
-import { AuthModule } from '@/modules/auth/presentation/auth.module';
-import { JwtAuthGuard } from '@/shared/guards/jwt-auth.guard';
-import { RolesGuard } from '@/shared/guards/roles.guard';
-import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
-import { UserModule } from '@/modules/user/presentation/user.module';
-import { PetModule } from '@/modules/pet/presentation/pet.module';
-import { OwnerModule } from '@/modules/owner/presentation/owner.module';
-import { StaffModule } from './modules/staff/presentation/staff.module';
-import { VetModule } from './modules/vet/presentation/vet.module';
-import { SpeciesModule } from './modules/species/presentation/species.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { JwtAuthGuard } from '@/shared/presentation/guards/jwt-auth.guard';
+import { RolesGuard } from '@/shared/presentation/guards/roles.guard';
+import { TransformInterceptor } from '@/shared/presentation/interceptors/transform.interceptor';
+import { UserModule } from '@/modules/user/user.module';
+import { PetModule } from '@/modules/pet/pet.module';
+import { OwnerModule } from '@/modules/owner/owner.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { VetModule } from './modules/vet/vet.module';
+import { SpeciesModule } from './modules/species/species.module';
+import { VaccineModule } from './modules/vaccine/vaccine.module';
+import { VaccineLotModule } from './modules/vaccine-lot/vaccine-lot.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { SpeciesModule } from './modules/species/presentation/species.module';
     VetModule,
     SpeciesModule,
     PetModule,
+    VaccineModule,
+    VaccineLotModule,
   ],
   controllers: [],
   providers: [

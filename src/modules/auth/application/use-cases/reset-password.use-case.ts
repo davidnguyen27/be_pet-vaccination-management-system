@@ -1,21 +1,29 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { I_AUTH_REPOSITORY } from '../../domain/i-auth.repository';
-import type { IAuthRepository } from '../../domain/i-auth.repository';
-import { ResetPasswordDto } from '../dtos/auth-req.dto';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
-import { extractTokenInput } from '@/shared/helpers/extract-token-input.helper';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
+import { extractTokenInput } from '@/modules/auth/helpers/extract-token-input.helper';
+
+export interface ResetPasswordCommand {
+  token: string;
+  newPassword: string;
+  confirmPassword?: string;
+}
 
 @Injectable()
 export class ResetPasswordUseCase {
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
   ) {}
 
-  async execute(dto: ResetPasswordDto): Promise<void> {
-    const tokenRecord = await extractTokenInput(this.authRepo, dto.token);
+  async execute(command: ResetPasswordCommand): Promise<void> {
+    if (command.confirmPassword !== undefined && command.confirmPassword !== command.newPassword) {
+      throw new BadRequestException('Password confirmation does not match.');
+    }
+
+    const tokenRecord = await extractTokenInput(this.authRepo, command.token);
 
     if (!tokenRecord) {
       throw new BadRequestException('Reset password link is invalid.');
@@ -38,7 +46,7 @@ export class ResetPasswordUseCase {
       throw new BadRequestException('Invalid reset password request.');
     }
 
-    const newPasswordHash = await bcrypt.hash(dto.newPassword, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+    const newPasswordHash = await bcrypt.hash(command.newPassword, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
 
     await this.authRepo.markVerifyTokenUsed(tokenRecord.id);
     await this.authRepo.changePassword(user.id, newPasswordHash);

@@ -1,4 +1,4 @@
-import { API_PREFIX } from '@/constants';
+import { API_PREFIX } from '@/constants/api-prefix';
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 

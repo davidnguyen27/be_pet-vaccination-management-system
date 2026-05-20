@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
 
 @Injectable()
 export class VerifyEmailUseCase {
-  constructor(@Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository) {}
+  constructor(@Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort) {}
 
   async execute(token: string): Promise<void> {
     const tokenHash = createHash('sha256').update(token).digest('hex');

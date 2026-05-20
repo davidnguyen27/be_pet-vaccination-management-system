@@ -1,27 +1,35 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { StaffRepository } from '../../infrastructure/staff.repository';
-import { StaffQueryDto } from '../dtos/staff-query.dto';
-import { StaffResponseDto } from '../dtos/staff-res.dto';
-import { PaginationDto } from '@/shared/application/pagination.dto';
-import { StaffMapper } from '../../infrastructure/staff.mapper';
-import { I_STAFF_REPOSITORY } from '../../domain/i-staff.repository';
+import { Injectable } from '@nestjs/common';
+import { Meta } from '@/shared/application/response.dto';
+import { FindStaffOptions } from '../ports/staff.repository.port';
+import { StaffModel } from '../model/staff.model';
+import { StaffQueryPort } from '../ports/staff.query.port';
+
+interface GetStaffsResult {
+  items: StaffModel[];
+  meta: Meta;
+}
 
 @Injectable()
 export class GetStaffsUseCase {
-  constructor(@Inject(I_STAFF_REPOSITORY) private readonly staffRepo: StaffRepository) {}
+  constructor(private readonly staffQuery: StaffQueryPort) {}
 
-  async execute(query: StaffQueryDto): Promise<PaginationDto<StaffResponseDto>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+  async getById(id: string): Promise<StaffModel> {
+    const staff = await this.staffQuery.findByUserId(id);
+    return staff;
+  }
 
-    const result = await this.staffRepo.findAll({
-      page,
-      limit,
-      search: query.search,
-    });
+  async getMany(options: FindStaffOptions): Promise<GetStaffsResult> {
+    const { items, totalItems } = await this.staffQuery.findMany(options);
+    const totalPages = options.limit > 0 ? Math.ceil(totalItems / options.limit) : 0;
 
-    const staffs = result.data.map(staff => StaffMapper.toResponse(staff));
-
-    return new PaginationDto(staffs, { total: result.total, page, limit });
+    return {
+      items,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total: totalItems,
+        totalPages,
+      },
+    };
   }
 }

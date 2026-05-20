@@ -1,26 +1,35 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { VetQueryDto } from '../dtos/vet-query.dto';
-import { PaginationDto } from '@/shared/application/pagination.dto';
-import { VetResponseDto } from '../dtos/vet-res.dto';
-import { VetMapper } from '../../infrastructure/vet.mapper';
-import { I_VET_REPOSITORY, IVetRepository } from '../../domain/i-vet.repository';
+import { Injectable } from '@nestjs/common';
+import { Meta } from '@/shared/application/response.dto';
+import { FindVetOptions } from '../ports/vet.repository.port';
+import { VetQueryPort } from '../ports/vet.query.port';
+import { VetModel } from '../model/vet.model';
+
+interface GetVetsResult {
+  items: VetModel[];
+  meta: Meta;
+}
 
 @Injectable()
 export class GetVetsUseCase {
-  constructor(@Inject(I_VET_REPOSITORY) private readonly vetRepo: IVetRepository) {}
+  constructor(private readonly vetQuery: VetQueryPort) {}
 
-  async execute(query: VetQueryDto): Promise<PaginationDto<VetResponseDto>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+  async getByUserId(userId: string): Promise<VetModel> {
+    const vet = await this.vetQuery.findByUserId(userId);
+    return vet;
+  }
 
-    const result = await this.vetRepo.findAll({
-      page,
-      limit,
-      search: query.search,
-    });
+  async getMany(options: FindVetOptions): Promise<GetVetsResult> {
+    const { items, totalItems } = await this.vetQuery.findMany(options);
+    const totalPages = options.limit > 0 ? Math.ceil(totalItems / options.limit) : 0;
 
-    const vets = result.data.map(vet => VetMapper.toResponse(vet));
-
-    return new PaginationDto(vets, { total: result.total, page, limit });
+    return {
+      items,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total: totalItems,
+        totalPages,
+      },
+    };
   }
 }

@@ -3,7 +3,7 @@ export enum employment_type {
   PART_TIME = 'PART_TIME',
 }
 
-export enum employment_status {
+export enum EmploymentStatus {
   WORKING = 'WORKING',
   ON_LEAVE = 'ON_LEAVE',
 }

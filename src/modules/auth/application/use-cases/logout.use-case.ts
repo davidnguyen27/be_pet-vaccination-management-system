@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
 
 @Injectable()
 export class LogoutUseCase {
-  constructor(@Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository) {}
+  constructor(@Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort) {}
 
   async execute(userId: string, tokenId?: string): Promise<void> {
     if (tokenId) {

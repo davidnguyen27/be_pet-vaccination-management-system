@@ -3,35 +3,42 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
-import { LoginDto } from '../dtos/auth-req.dto';
-import { JwtPayload } from '@/shared/decorators/current-user.decorator';
-import { AuthTokensResponseDto } from '../dtos/auth-res.dto';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
-import { AUTH_CONSTANTS } from '@/constants';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
+import { AuthJwtPayload } from '../../domain/jwt-payload';
+import { AuthTokensResponseDTO } from '../../presentation/http/dto/auth.dto';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
+import { AUTH_CONSTANTS } from '@/constants/auth';
+
+export interface LoginCommand {
+  email: string;
+  password: string;
+}
 
 @Injectable()
 export class LoginUseCase {
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
-  async execute(dto: LoginDto, meta?: { userAgent?: string; ipAddress?: string }): Promise<AuthTokensResponseDto> {
-    const user = await this.userRepo.findByEmail(dto.email);
+  async execute(
+    command: LoginCommand,
+    meta?: { userAgent?: string; ipAddress?: string },
+  ): Promise<AuthTokensResponseDTO> {
+    const user = await this.userRepo.findByEmail(command.email);
 
     // Prevent user enumeration: same error for missing/inactive accounts
     if (!user || !user.isActive) throw new UnauthorizedException('Invalid email or password');
     if (user.isDeleted) throw new NotFoundException('Your account has been deleted. Please contact support.');
 
-    const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    const isMatch = await user.password.compare(command.password);
     if (!isMatch) throw new UnauthorizedException('Invalid email or password');
 
     const tokenId = randomUUID();
 
-    const payload: JwtPayload = {
+    const payload: AuthJwtPayload = {
       sub: user.id,
       email: user.email,
       roleCode: user.roleCode,
@@ -66,6 +73,6 @@ export class LoginUseCase {
 
     await this.authRepo.updateLastLogin(user.id);
 
-    return new AuthTokensResponseDto(accessToken, rawRefreshToken, accessExpiresAt, expiresAt);
+    return new AuthTokensResponseDTO(accessToken, rawRefreshToken, accessExpiresAt, expiresAt);
   }
 }

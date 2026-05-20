@@ -1,31 +1,44 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { I_VET_REPOSITORY, type IVetRepository } from '../../domain/i-vet.repository';
-import { VetDto } from '../dtos/vet-req.dto';
-import { VetResponseDto } from '../dtos/vet-res.dto';
-import { VetMapper } from '../../infrastructure/vet.mapper';
+import { Injectable } from '@nestjs/common';
+import { VetEntity } from '../../domain/vet.entity';
+import { VetRepositoryPort } from '../ports/vet.repository.port';
+import { EmploymentStatus } from '@/enums';
+
+interface UpdateVetCommand {
+  userId: string;
+  bio?: string;
+  licenseNo?: string;
+  licenseIssueBy?: string;
+  licenseValidFrom?: string;
+  licenseValidTo?: string;
+  joinDate?: string;
+  endDate?: string | null;
+  address?: string;
+  citizenId?: string;
+  employmentStatus?: EmploymentStatus;
+}
 
 @Injectable()
 export class UpdateVetUseCase {
-  constructor(@Inject(I_VET_REPOSITORY) private readonly vetRepo: IVetRepository) {}
+  constructor(private readonly vetRepo: VetRepositoryPort) {}
 
-  async execute(userId: string, dto: VetDto): Promise<VetResponseDto> {
-    const vet = await this.vetRepo.findByUserId(userId);
-    if (!vet) throw new NotFoundException('Vet not found');
+  async execute(command: UpdateVetCommand): Promise<VetEntity> {
+    const vet = await this.vetRepo.findByUserIdOrThrow(command.userId);
 
-    const updated = await this.vetRepo.update({
-      userId,
-      ...(dto.bio !== undefined && { bio: dto.bio }),
-      ...(dto.address !== undefined && { address: dto.address }),
-      ...(dto.citizenId !== undefined && { citizenId: dto.citizenId }),
-      ...(dto.employmentStatus !== undefined && { employmentStatus: dto.employmentStatus }),
-      ...(dto.joinDate !== undefined && { joinDate: dto.joinDate }),
-      ...(dto.endDate !== undefined && { endDate: dto.endDate }),
-      ...(dto.licenseIssueBy !== undefined && { licenseIssueBy: dto.licenseIssueBy }),
-      ...(dto.licenseNo !== undefined && { licenseNo: dto.licenseNo }),
-      ...(dto.licenseValidFrom !== undefined && { licenseValidFrom: dto.licenseValidFrom }),
-      ...(dto.licenseValidTo !== undefined && { licenseValidTo: dto.licenseValidTo }),
+    vet.update({
+      bio: command.bio,
+      address: command.address,
+      citizenId: command.citizenId,
+      employmentStatus: command.employmentStatus,
+      joinDate: command.joinDate !== undefined ? new Date(command.joinDate) : undefined,
+      endDate: command.endDate !== undefined ? (command.endDate ? new Date(command.endDate) : null) : undefined,
+      licenseIssueBy: command.licenseIssueBy,
+      licenseNo: command.licenseNo,
+      licenseValidFrom: command.licenseValidFrom !== undefined ? new Date(command.licenseValidFrom) : undefined,
+      licenseValidTo: command.licenseValidTo !== undefined ? new Date(command.licenseValidTo) : undefined,
     });
 
-    return VetMapper.toResponse(updated);
+    await this.vetRepo.save(vet);
+
+    return vet;
   }
 }

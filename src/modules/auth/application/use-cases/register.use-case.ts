@@ -2,27 +2,34 @@ import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { RoleCode } from '@/enums';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
-import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
-import { RegisterDto } from '../dtos/auth-req.dto';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
+import { EMAIL_SERVICE_PORT, EmailServicePort } from '../ports/email.service.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
-import { API_PREFIX } from '@/constants';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
+import { API_PREFIX } from '@/constants/api-prefix';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
 import { ConfigService } from '@nestjs/config';
+import { UserEntity } from '@/modules/user/domain/user.entity';
+import { randomUUID } from 'crypto';
+
+export interface RegisterCommand {
+  email: string;
+  password: string;
+  fullName?: string;
+}
 
 @Injectable()
 export class RegisterUseCase {
   private readonly logger = new Logger(RegisterUseCase.name);
 
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
+    @Inject(EMAIL_SERVICE_PORT) private readonly emailService: EmailServicePort,
     private readonly configService: ConfigService,
   ) {}
 
-  async execute(dto: RegisterDto): Promise<void> {
-    const existing = await this.userRepo.findByEmail(dto.email);
+  async execute(command: RegisterCommand): Promise<void> {
+    const existing = await this.userRepo.findByEmail(command.email);
     if (existing && existing.isActive) {
       throw new ConflictException('Email has already been registered');
     }
@@ -35,24 +42,28 @@ export class RegisterUseCase {
       throw new ConflictException('Email already belongs to a non-owner account');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(command.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
 
     this.logger.debug(`Register with: `, existing);
 
     if (existing) {
       await this.authRepo.changePassword(existing.id, passwordHash);
-      await this.userRepo.ensureOwnerProfile(existing.id);
     }
 
     const user =
       existing ??
-      (await this.userRepo.create({
-        email: dto.email,
-        passwordHash,
+      UserEntity.create(randomUUID(), {
         roleCode: RoleCode.OWN,
-        isActive: false,
-        fullName: dto.fullName,
-      }));
+        email: command.email,
+        password: command.password,
+        fullName: command.fullName ?? null,
+      });
+
+    if (!existing) {
+      const hashedPassword = await user.password.hash();
+      user.updatePassword(hashedPassword);
+      await this.userRepo.save(user);
+    }
 
     await this.authRepo.invalidatePreviousVerifyTokens(user.id);
 
@@ -74,12 +85,12 @@ export class RegisterUseCase {
     const prefixPath = API_PREFIX.replace(/^\/+/, '');
     const verifyUrl = `${backendBaseUrl}/${prefixPath}/auth/verify-email?token=${rawToken}`;
 
-    await this.emailService.sendVerificationLink({
-      to: dto.email,
+    await this.emailService.sendVerificationEmail({
+      to: command.email,
       verifyUrl,
-      fullName: dto.fullName,
+      fullName: command.fullName,
     });
 
-    this.logger.log(`Registration verification link sent to ${dto.email}`);
+    this.logger.log(`Registration verification link sent to ${command.email}`);
   }
 }

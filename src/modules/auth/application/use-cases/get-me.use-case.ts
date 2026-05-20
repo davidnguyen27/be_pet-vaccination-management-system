@@ -1,19 +1,32 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { I_USER_REPOSITORY, IUserRepository } from '@/modules/user/domain/i-user.repository';
-import { UserResponseDto } from '@/modules/user/application/dtos/user-res.dto';
-import { UserMapper } from '@/modules/user/infrastructure/user.mapper';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
+import { MeResponse } from '../../presentation/http/dto/auth.dto';
 
 @Injectable()
 export class GetMeUseCase {
-  constructor(@Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository) {}
+  constructor(@Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort) {}
 
-  async execute(userId: string): Promise<UserResponseDto> {
+  async execute(userId: string): Promise<MeResponse> {
     const user = await this.userRepo.findById(userId);
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    return UserMapper.toResponse(user);
+    return {
+      id: user.id,
+      email: user.email,
+      roleId: user.roleId,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
+      avatarUrl: user.avatarUrl,
+      dob: user.dob?.toISOString() ?? null,
+      isActive: user.isActive,
+      isDeleted: user.isDeleted,
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      deletedAt: user.deletedAt?.toISOString() ?? null,
+    };
   }
 }

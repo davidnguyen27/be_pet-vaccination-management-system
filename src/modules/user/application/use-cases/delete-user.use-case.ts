@@ -1,13 +1,16 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { I_USER_REPOSITORY, type IUserRepository } from '../../domain/i-user.repository';
+import { Injectable } from '@nestjs/common';
+import { UserRepositoryPort } from '../ports/user.repository.port';
+import { UserDeletedError } from '../../domain/exceptions/user.error';
 
 @Injectable()
 export class DeleteUserUseCase {
-  constructor(@Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository) {}
+  constructor(private readonly userRepo: UserRepositoryPort) {}
 
-  async execute(userId: string) {
-    const existing = await this.userRepo.findById(userId);
-    if (!existing) throw new NotFoundException('User not found');
-    await this.userRepo.delete(userId);
+  async execute(userId: string): Promise<void> {
+    const user = await this.userRepo.findByIdOrThrow(userId);
+    if (user.isDeleted) throw new UserDeletedError(userId);
+
+    user.softDelete();
+    await this.userRepo.save(user);
   }
 }

@@ -1,30 +1,28 @@
-import { ApiProperty } from '@nestjs/swagger';
+export interface Meta {
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
+}
 
-export class ApiResponseDto<T> {
-  @ApiProperty()
-  success: boolean;
+export class DataResponse<T> {
+  readonly success: boolean;
+  readonly message?: string;
+  readonly data: T;
+  readonly meta?: Meta;
 
-  @ApiProperty()
-  statusCode: number;
-
-  @ApiProperty()
-  message: string;
-
-  @ApiProperty()
-  data: T;
-
-  constructor(statusCode: number, message: string, data: T) {
-    this.success = statusCode >= 200 && statusCode < 300;
-    this.statusCode = statusCode;
-    this.message = message;
+  constructor(data: T, option?: { meta?: Meta; message?: string }) {
+    this.success = true;
+    this.message = option?.message;
     this.data = data;
+    this.meta = option?.meta;
   }
 
-  static success<T>(data: T, message = 'OK'): ApiResponseDto<T> {
-    return new ApiResponseDto<T>(200, message, data);
+  static of<T>(data: T, option?: { meta?: Meta; message?: string }): DataResponse<T> {
+    return new DataResponse(data, option);
   }
 
-  static created<T>(data: T, message = 'Created'): ApiResponseDto<T> {
-    return new ApiResponseDto<T>(201, message, data);
+  static paginate<T>(data: T[], meta: Meta): DataResponse<T[]> {
+    return new DataResponse(data, { meta });
   }
 }

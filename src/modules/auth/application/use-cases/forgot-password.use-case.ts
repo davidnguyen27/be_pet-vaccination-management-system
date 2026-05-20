@@ -1,27 +1,32 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { ForgotPasswordDto } from '../dtos/auth-req.dto';
-import { I_EMAIL_SERVICE, type IEmailService } from '../ports/i-email.service';
-import { I_USER_REPOSITORY, type IUserRepository } from '@/modules/user/domain/i-user.repository';
-import { I_AUTH_REPOSITORY, type IAuthRepository } from '../../domain/i-auth.repository';
+import { EMAIL_SERVICE_PORT, EmailServicePort } from '../ports/email.service.port';
+import { UserRepositoryPort } from '@/modules/user/application/ports/user.repository.port';
+import { AUTH_REPOSITORY_PORT, AuthRepositoryPort } from '../ports/auth.repository.port';
 import { AUTH_CONSTANTS } from '@/constants/auth';
 import { ConfigService } from '@nestjs/config';
+
+export interface ForgotPasswordCommand {
+  email: string;
+}
 
 @Injectable()
 export class ForgotPasswordUseCase {
   private readonly logger = new Logger(ForgotPasswordUseCase.name);
 
   constructor(
-    @Inject(I_AUTH_REPOSITORY) private readonly authRepo: IAuthRepository,
-    @Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(I_EMAIL_SERVICE) private readonly emailService: IEmailService,
+    @Inject(AUTH_REPOSITORY_PORT) private readonly authRepo: AuthRepositoryPort,
+    @Inject(UserRepositoryPort) private readonly userRepo: UserRepositoryPort,
+    @Inject(EMAIL_SERVICE_PORT) private readonly emailService: EmailServicePort,
     private readonly configService: ConfigService,
   ) {}
 
-  async execute(dto: ForgotPasswordDto): Promise<void> {
-    const user = await this.userRepo.findByEmail(dto.email);
+  async execute(command: ForgotPasswordCommand): Promise<{ message: string }> {
+    const user = await this.userRepo.findByEmail(command.email);
     if (!user || !user.isActive || user.isDeleted) {
-      return;
+      return {
+        message: 'If this email exists, a reset password link has been sent.',
+      };
     }
 
     await this.authRepo.invalidatePreviousVerifyTokens(user.id);
@@ -37,18 +42,27 @@ export class ForgotPasswordUseCase {
       redirectUrl: AUTH_CONSTANTS.TOKEN_PURPOSE.RESET_PASSWORD,
     });
 
-    const frontendBaseUrl = (this.configService.get<string>('app.frontendUrl') ?? 'http://localhost:5173').replace(
-      /\/$/,
-      '',
-    );
-    const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}`;
+    const resetUrl = this.buildResetPasswordUrl(rawToken);
 
-    await this.emailService.sendResetPasswordLink({
+    await this.emailService.sendPasswordResetEmail({
       to: user.email,
       resetUrl,
       fullName: user.fullName ?? undefined,
     });
 
     this.logger.log(`Reset password link sent to ${user.email}`);
+
+    return {
+      message: 'If this email exists, a reset password link has been sent.',
+    };
+  }
+
+  private buildResetPasswordUrl(rawToken: string): string {
+    const frontendBaseUrl = this.configService.get<string>('app.frontendUrl') ?? 'http://localhost:5173';
+    const resetPasswordPath = this.configService.get<string>('app.resetPasswordPath') ?? '/reset-password';
+    const resetUrl = new URL(resetPasswordPath, frontendBaseUrl);
+    resetUrl.searchParams.set('token', rawToken);
+
+    return resetUrl.toString();
   }
 }

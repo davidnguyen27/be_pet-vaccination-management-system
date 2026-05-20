@@ -1,20 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PetDto } from '../dtos/pet-req.dto';
-import { PetResponseDto } from '../dtos/pet-res.dto';
-import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
-import { PetMapper } from '../../infrastructure/pet.mapper';
+import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { PetEntity } from '../../domain/pet.entity';
+import { PetRepositoryPort } from '../ports/pet.repository.port';
+import { PetDTO } from '../../presentation/http/dto/pet-request.dto';
+import { PetModel } from '../model/pet.model';
+import { PetQueryPort } from '../ports/pet.query.port';
 
 @Injectable()
 export class CreatePetUseCase {
-  constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
+  constructor(
+    private readonly petRepo: PetRepositoryPort,
+    private readonly petQuery: PetQueryPort,
+  ) {}
 
-  async execute(dto: PetDto): Promise<PetResponseDto> {
-    const pet = await this.petRepo.create({
+  async execute(dto: PetDTO): Promise<PetModel> {
+    const pet = PetEntity.create(randomUUID(), {
       ownerId: dto.ownerId,
       speciesId: dto.speciesId,
       name: dto.name,
       sex: dto.sex,
-      dob: dto.dob,
+      dob: new Date(dto.dob),
       weight: dto.weight,
       color: dto.color,
       breed: dto.breed,
@@ -22,6 +27,8 @@ export class CreatePetUseCase {
       isSterilized: dto.isSterilized,
     });
 
-    return PetMapper.toResponse(pet);
+    await this.petRepo.save(pet);
+
+    return this.petQuery.findById(pet.id);
   }
 }

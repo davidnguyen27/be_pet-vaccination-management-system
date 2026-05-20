@@ -1,26 +1,35 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { I_OWNER_REPOSITORY, IOwnerRepository } from '../../domain/i-owner.repository';
-import { OwnerQueryDto } from '../dtos/owner-query.dto';
-import { PaginationDto } from '@/shared/application/pagination.dto';
-import { OwnerResponseDto } from '../dtos/owner-res.dto';
-import { OwnerMapper } from '../../infrastructure/owner.mapper';
+import { Injectable } from '@nestjs/common';
+import { FindOwnerOptions } from '../ports/owner.repository.port';
+import { OwnerQueryPort } from '../ports/owner.query.port';
+import { Meta } from '@/shared/application/response.dto';
+import { OwnerModel } from '../model/owner.model';
+
+interface GetOwnersResult {
+  items: OwnerModel[];
+  meta: Meta;
+}
 
 @Injectable()
 export class GetOwnersUseCase {
-  constructor(@Inject(I_OWNER_REPOSITORY) private readonly ownerRepo: IOwnerRepository) {}
+  constructor(private readonly ownerQuery: OwnerQueryPort) {}
 
-  async execute(query: OwnerQueryDto): Promise<PaginationDto<OwnerResponseDto>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+  async getById(id: string): Promise<OwnerModel> {
+    const owner = await this.ownerQuery.findByUserId(id);
+    return owner;
+  }
 
-    const result = await this.ownerRepo.findAll({
-      page,
-      limit,
-      search: query.search,
-    });
+  async getMany(options: FindOwnerOptions): Promise<GetOwnersResult> {
+    const { items, totalItems } = await this.ownerQuery.findMany(options);
+    const totalPages = options.limit > 0 ? Math.ceil(totalItems / options.limit) : 0;
 
-    const owners = result.data.map(owner => OwnerMapper.toResponse(owner));
-
-    return new PaginationDto(owners, { total: result.total, page, limit });
+    return {
+      items,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total: totalItems,
+        totalPages,
+      },
+    };
   }
 }

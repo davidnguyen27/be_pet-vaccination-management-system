@@ -1,11 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { I_PET_REPOSITORY, IPetRepository } from '../../domain/i-pet.entity';
+import { Injectable } from '@nestjs/common';
+import { PetRepositoryPort } from '../ports/pet.repository.port';
 
 @Injectable()
 export class DeletePetUseCase {
-  constructor(@Inject(I_PET_REPOSITORY) private readonly petRepo: IPetRepository) {}
+  constructor(private readonly petRepo: PetRepositoryPort) {}
 
   async execute(id: string): Promise<void> {
-    await this.petRepo.delete(id);
+    const pet = await this.petRepo.findByIdOrThrow(id);
+    pet.softDelete();
+    await this.petRepo.save(pet);
   }
 }

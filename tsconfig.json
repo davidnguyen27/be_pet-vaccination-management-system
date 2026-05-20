@@ -2,31 +2,36 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    // "resolvePackageJsonExports": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    "target": "es2023",
+    "types": ["node", "multer"],
+
+    "outDir": "./dist",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@common/*": ["./src/shared/*"],
+      "@configs/*": ["./src/configs/*"]
+    },
+
+    "strict": true,
+    // "strictBindCallApply": false,
+    // "strictNullChecks": true,
+    // "noImplicitAny": true,
+
+    "ignoreDeprecations": "6.0",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "isolatedModules": false,
     "declaration": false,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
     "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["*"],
-      "@modules/*": ["modules/*"],
-      "@common/*": ["shared/*"],
-      "@configs/*": ["configs/*"]
-    },
     "incremental": true,
     "skipLibCheck": true,
-    "strict": true,
-    // "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": true,
-    "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
+    // "resolvePackageJsonExports": true,
   }
 }

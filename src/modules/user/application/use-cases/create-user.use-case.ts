@@ -1,34 +1,60 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { UserDto } from '../dtos/user-req.dto';
-import { AUTH_CONSTANTS } from '@/constants/auth';
-import { I_USER_REPOSITORY, type IUserRepository } from '../../domain/i-user.repository';
-import { UserMapper } from '../../infrastructure/user.mapper';
-import { UserResponseDto } from '../dtos/user-res.dto';
+import { Injectable } from '@nestjs/common';
+import { UserEntity } from '../../domain/user.entity';
+import { UserRepositoryPort } from '../ports/user.repository.port';
+import { UserEmailAlreadyExistsError } from '../../domain/exceptions/user.error';
+import { randomUUID } from 'crypto';
+import { CloudinaryService } from '@/shared/infrastructure/cloudinary/cloudinary.service';
+
+interface CreateUserCommand {
+  email: string;
+  password: string;
+  roleCode: string;
+  fullName: string | null;
+  phoneNumber: string | null;
+  dob: Date | null;
+  avatar?: Express.Multer.File;
+}
 
 @Injectable()
 export class CreateUserUseCase {
-  constructor(@Inject(I_USER_REPOSITORY) private readonly userRepo: IUserRepository) {}
+  constructor(
+    private readonly userRepo: UserRepositoryPort,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
-  async execute(dto: UserDto): Promise<UserResponseDto> {
-    const existing = await this.userRepo.findByEmail(dto.email);
+  async execute(command: CreateUserCommand): Promise<UserEntity> {
+    // 1. Check email uniqueness
+    const exists = await this.userRepo.existsByEmail(command.email);
+    if (exists) throw new UserEmailAlreadyExistsError(command.email);
 
-    if (existing && !existing.isDeleted) throw new ConflictException('Email already registered');
-    if (existing?.isDeleted) throw new ConflictException('This account has been deleted and cannot be re-registered');
+    const uploadedAvatar = command.avatar
+      ? await this.cloudinaryService.upload(command.avatar, {
+          folder: 'pet-vaccination/users/avatars',
+        })
+      : null;
 
-    const passwordHash = await bcrypt.hash(dto.password, AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS);
+    try {
+      // 2. Create entity
+      const user = UserEntity.create(randomUUID(), {
+        ...command,
+        roleCode: command.roleCode,
+        avatarUrl: uploadedAvatar?.secure_url ?? null,
+      });
 
-    const user = await this.userRepo.create({
-      email: dto.email,
-      passwordHash,
-      roleCode: dto.roleCode,
-      isActive: true,
-      fullName: dto.fullName,
-      phoneNumber: dto.phoneNumber,
-      avatarUrl: dto.avatarUrl,
-      dob: dto.dob,
-    });
+      // 3. Hash password
+      const hashedPassword = await user.password.hash();
+      user.updatePassword(hashedPassword);
 
-    return UserMapper.toResponse(user);
+      // 4. Persist
+      await this.userRepo.save(user);
+
+      return user;
+    } catch (error) {
+      if (uploadedAvatar?.public_id) {
+        await this.cloudinaryService.delete(uploadedAvatar.public_id);
+      }
+
+      throw error;
+    }
   }
 }
