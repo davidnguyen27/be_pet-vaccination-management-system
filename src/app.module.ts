@@ -19,6 +19,10 @@ import { VetModule } from './modules/vet/vet.module';
 import { SpeciesModule } from './modules/species/species.module';
 import { VaccineModule } from './modules/vaccine/vaccine.module';
 import { VaccineLotModule } from './modules/vaccine-lot/vaccine-lot.module';
+import { VaccinePlanModule } from './modules/vaccine-plan/vaccine-plan.module';
+import { MicrochipModule } from './modules/microchip/microchip.module';
+import { MicrochipBatchModule } from './modules/microchip-batch/microchip-batch.module';
+import { WorkingShiftModule } from './modules/working-shift/working-shift.module';
 
 @Module({
   imports: [
@@ -40,6 +44,10 @@ import { VaccineLotModule } from './modules/vaccine-lot/vaccine-lot.module';
     PetModule,
     VaccineModule,
     VaccineLotModule,
+    VaccinePlanModule,
+    MicrochipModule,
+    MicrochipBatchModule,
+    WorkingShiftModule,
   ],
   controllers: [],
   providers: [

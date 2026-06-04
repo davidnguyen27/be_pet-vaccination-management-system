@@ -8,3 +8,12 @@ export enum VaccineLotStatus {
   OUT_OF_STOCK = 'OUT_OF_STOCK',
   EXPIRED = 'EXPIRED',
 }
+
+export enum VaccinePlanStatus {
+  PLANNED = 'PLANNED',
+  DUE_SOON = 'DUE_SOON',
+  OVERDUE = 'OVERDUE',
+  DONE = 'DONE',
+  SKIPPED = 'SKIPPED',
+  CANCELLED = 'CANCELLED',
+}
